@@ -103,7 +103,7 @@ def extract_chunk(chunk: Chunk, llm: LLMClient) -> ExtractionResult:
 
     data = None
     for _ in range(2):
-        response = llm.chat(messages, json_schema=EXTRACTION_SCHEMA)
+        response = llm.chat(messages, json_schema=EXTRACTION_SCHEMA, max_tokens=4096)
         data = _parse_extraction_payload(response.content)
         if data is not None:
             break
