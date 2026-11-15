@@ -255,7 +255,7 @@ def build_pdf(filename: str = "REPORT.pdf") -> None:
     story.append(Paragraph(sol_desc, body_style))
 
     if Path("figures/architecture_diagram.png").exists():
-        story.append(Image("figures/architecture_diagram.png", width=170 * mm, height=72 * mm))
+        story.append(Image("figures/architecture_diagram.png", width=168 * mm, height=79 * mm))
         caption_1 = "Рис. 1. Архитектура системы «ПолярТех»: ReAct-агент, граф знаний, ERP и шлюз безопасности"
         story.append(Paragraph(caption_1, caption_style))
 
@@ -378,7 +378,7 @@ def build_pdf(filename: str = "REPORT.pdf") -> None:
     story.append(Spacer(1, 2 * mm))
 
     if Path("figures/benchmark_comparison.png").exists():
-        story.append(Image("figures/benchmark_comparison.png", width=170 * mm, height=65 * mm))
+        story.append(Image("figures/benchmark_comparison.png", width=168 * mm, height=71 * mm))
         caption_2 = "Рис. 2. Сравнение точности по типам вопросов и удельной стоимости режимов (в токенах на вопрос)"
         story.append(Paragraph(caption_2, caption_style))
 
@@ -415,7 +415,7 @@ def build_pdf(filename: str = "REPORT.pdf") -> None:
     story.append(Paragraph(ex2_text, body_style))
 
     if Path("figures/subgraph_topology.png").exists():
-        story.append(Image("figures/subgraph_topology.png", width=165 * mm, height=68 * mm))
+        story.append(Image("figures/subgraph_topology.png", width=168 * mm, height=79 * mm))
         caption_3 = (
             "Рис. 3. Фрагмент графа знаний вокруг AR-210: цепочка актуальной замены и обрыв пути при max_hops ≤ 3"
         )
@@ -497,7 +497,7 @@ def build_pdf(filename: str = "REPORT.pdf") -> None:
     story.append(Paragraph(safe_text, body_style))
 
     if Path("figures/safety_flowchart.png").exists():
-        story.append(Image("figures/safety_flowchart.png", width=165 * mm, height=60 * mm))
+        story.append(Image("figures/safety_flowchart.png", width=168 * mm, height=69 * mm))
         caption_4 = "Рис. 4. Блок-схема барьеров безопасности и шлюза Human-in-the-Loop при выполнении операций"
         story.append(Paragraph(caption_4, caption_style))
 
