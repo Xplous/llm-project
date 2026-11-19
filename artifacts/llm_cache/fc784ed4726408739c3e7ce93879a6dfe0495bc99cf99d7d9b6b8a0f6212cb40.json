@@ -1,1 +1,0 @@
-{"id": "chatcmpl-560", "object": "chat.completion", "created": 1794678196, "model": "qwen3:4b-instruct-2507-q4_K_M", "system_fingerprint": "fp_ollama", "choices": [{"index": 0, "message": {"role": "assistant", "content": "Да"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 20, "completion_tokens": 3, "total_tokens": 23}}

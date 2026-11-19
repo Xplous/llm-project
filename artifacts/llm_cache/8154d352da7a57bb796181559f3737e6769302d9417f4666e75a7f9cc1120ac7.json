@@ -1,1 +1,0 @@
-{"id": "chatcmpl-214", "object": "chat.completion", "created": 1794676285, "model": "qwen3:4b-instruct-2507-q4_K_M", "system_fingerprint": "fp_ollama", "choices": [{"index": 0, "message": {"role": "assistant", "content": "Привет! Слово — \"радость\". 😊"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 19, "completion_tokens": 15, "total_tokens": 34}}

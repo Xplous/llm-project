@@ -62,8 +62,8 @@ def generate_architecture_diagram() -> None:
         )
     )
     ax.text(77.5, 43, "Граф знаний (Graph RAG)", ha="center", va="center", fontsize=7.5, weight="bold", color="#0F172A")
-    g_text = "• local_search: пути ≤ 3 хопов + замены REPLACED_BY\n• global_search: Map-Reduce по 24 сообществам"
-    ax.text(77.5, 38, g_text, ha="center", va="center", fontsize=6, color="#475569")
+    g_text = "• 118 узлов, 279 рёбер, 8 сообществ Лувена\n• local_search (пути ≤ 3 + REPLACED_BY) / global Map-Reduce"
+    ax.text(77.5, 38, g_text, ha="center", va="center", fontsize=5.8, color="#475569")
 
     # Контур 2: ERP
     ax.add_patch(
@@ -72,7 +72,7 @@ def generate_architecture_diagram() -> None:
         )
     )
     ax.text(77.5, 27, "Учётная система (ERP)", ha="center", va="center", fontsize=7.5, weight="bold", color="#0F172A")
-    erp_text = "• check_stock (5 складов) / get_price (цены)\n• 3 повтора при недоступности сети (ErpUnavailable)"
+    erp_text = "• check_stock (4 склада) / get_price (цены)\n• до 3 попыток при сбоях сети (ErpUnavailable)"
     ax.text(77.5, 22, erp_text, ha="center", va="center", fontsize=6, color="#475569")
 
     # Контур 3: Human-in-the-Loop Gateway
@@ -193,10 +193,10 @@ def generate_subgraph_topology() -> None:
         )
     )
     callout = (
-        "Цепочка актуальной замены: P-1042 -> REPLACED_BY -> P-1042B -> SUPPLIED_BY -> ХолодКомплект\n"
-        "Обрыв на multihop: путь AR-210 -> P-1042 -> P-1042B -> ХолодКомплект (4 ребра) превышает max_hops ≤ 3"
+        "Обход local_search: AR-210 -> P-1042 -> пусковое реле <- E-17 (3 ребра)\n"
+        "+ авто-разворачивание: P-1042 -> REPLACED_BY -> P-1042B -> ХолодКомплект"
     )
-    ax.text(67, 7, callout, ha="center", va="center", fontsize=6, color="#475569", style="italic")
+    ax.text(67, 7, callout, ha="center", va="center", fontsize=5.8, color="#334155", style="italic")
 
     plt.tight_layout()
     out_path = FIGURES_DIR / "subgraph_topology.png"
@@ -213,9 +213,9 @@ def generate_benchmark_comparison() -> None:
     width = 0.2
 
     baseline_vals = [1.000, 0.571, 0.000, 0.000, 1.000, 0.500]
-    local_vals = [0.800, 0.143, 0.500, 0.000, 1.000, 0.417]
-    global_vals = [0.600, 0.286, 0.000, 0.000, 0.000, 0.208]
-    agent_vals = [0.800, 0.143, 0.000, 0.200, 0.000, 0.250]
+    local_vals = [1.000, 1.000, 1.000, 0.000, 1.000, 0.792]
+    global_vals = [0.800, 0.143, 0.500, 0.000, 1.000, 0.417]
+    agent_vals = [1.000, 1.000, 0.750, 0.800, 1.000, 0.917]
 
     ax1.bar([i - 1.5 * width for i in x], baseline_vals, width, label="Flat RAG", color="#64748B")
     ax1.bar([i - 0.5 * width for i in x], local_vals, width, label="Local Graph", color="#0D9488")
@@ -226,38 +226,39 @@ def generate_benchmark_comparison() -> None:
     ax1.set_title("Точность по типам вопросов", fontsize=8, weight="bold", color="#1E293B", pad=8)
     ax1.set_xticks(list(x))
     ax1.set_xticklabels(categories, fontsize=6.5)
-    ax1.set_ylim(0, 1.15)
+    ax1.set_ylim(0, 1.22)
     ax1.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5, color="#CBD5E1")
-    ax1.legend(loc="upper right", fontsize=6, frameon=True, facecolor="#FFFFFF", edgecolor="#E2E8F0")
+    ax1.legend(loc="upper right", ncol=2, fontsize=5.8, frameon=True, facecolor="#FFFFFF", edgecolor="#E2E8F0")
 
     for spine in ["top", "right"]:
         ax1.spines[spine].set_visible(False)
         ax2.spines[spine].set_visible(False)
 
-    modes = ["Local", "Flat RAG", "Agent", "Global"]
-    tokens = [238.7, 1356.2, 5461.5, 16471.7]
-    bar_colors = ["#0D9488", "#64748B", "#2563EB", "#8B5CF6"]
+    modes = ["Local", "Flat RAG", "Global", "Agent"]
+    tokens = [1113.5, 1356.7, 3887.9, 5130.4]
+    bar_colors = ["#0D9488", "#64748B", "#8B5CF6", "#2563EB"]
 
     bars = ax2.bar(modes, tokens, color=bar_colors, width=0.55)
     ax2.set_ylabel("Токенов на вопрос", fontsize=7, color="#475569")
     ax2.set_title("Стоимость режимов (Токены)", fontsize=8, weight="bold", color="#1E293B", pad=8)
     ax2.set_xticks(range(len(modes)))
     ax2.set_xticklabels(modes, fontsize=6.5)
+    ax2.set_ylim(0, 6200)
     ax2.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5, color="#CBD5E1")
 
     for bar, val in zip(bars, tokens, strict=True):
         yval = bar.get_height()
         ax2.text(
-            bar.get_x() + bar.get_width() / 2, yval + 350,
+            bar.get_x() + bar.get_width() / 2, yval + 140,
             f"{val:.0f}", ha="center", va="bottom", fontsize=6.5, weight="bold", color="#334155"
         )
 
     ax2.annotate(
-        "в 5.7 раз дешевле Flat RAG",
-        xy=(0, 300),
-        xytext=(0.4, 5200),
-        arrowprops={"arrowstyle": "->", "lw": 0.8, "color": "#0D9488", "connectionstyle": "arc3,rad=-0.2"},
-        fontsize=6,
+        "-18% токенов к Flat RAG\nточность 0.79 vs 0.50",
+        xy=(0, 1550),
+        xytext=(-0.35, 3600),
+        arrowprops={"arrowstyle": "->", "lw": 0.8, "color": "#0D9488", "connectionstyle": "arc3,rad=0.15"},
+        fontsize=5.6,
         color="#0D9488",
         weight="bold",
     )
@@ -295,7 +296,7 @@ def generate_safety_flowchart() -> None:
         )
     )
     ax.text(34, 26.5, "1. Параметры", ha="center", va="center", fontsize=6.5, weight="bold", color="#0F172A")
-    ax.text(34, 22, "• Склад (5 городов)\n• Формат Part ID", ha="center", va="center", fontsize=5.8, color="#475569")
+    ax.text(34, 22, "• Склад (4 города)\n• Формат Part ID", ha="center", va="center", fontsize=5.8, color="#475569")
 
     ax.annotate("", xy=(50, 25), xytext=(44, 25), arrowprops={"arrowstyle": "-|>", "lw": 1.0, "color": "#475569"})
 
