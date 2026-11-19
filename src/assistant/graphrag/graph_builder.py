@@ -40,6 +40,10 @@ def build_graph(results: list[ExtractionResult]) -> nx.DiGraph:
                 graph.add_node(u, type=relation.subject.type, name=relation.subject.name, sources=[])
             if v not in graph:
                 graph.add_node(v, type=relation.object.type, name=relation.object.name, sources=[])
+            if chunk_id not in graph.nodes[u]["sources"]:
+                graph.nodes[u]["sources"].append(chunk_id)
+            if chunk_id not in graph.nodes[v]["sources"]:
+                graph.nodes[v]["sources"].append(chunk_id)
 
             if (u, v) not in edges_data:
                 edges_data[(u, v)] = {"type": relation.type, "sources": set()}

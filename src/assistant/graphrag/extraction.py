@@ -15,44 +15,128 @@ from assistant.infra.schemas import (
 )
 
 SYSTEM_PROMPT = """Ты анализируешь фрагменты технической документации компании «ПолярТех» и извлекаешь граф знаний.
-Схема графа знаний и допустимые типы связей (направление строго от subject к object):
-- Model -> BELONGS_TO -> ProductLine (модель входит в линейку оборудования)
-- Model -> HAS_PART -> Part (в модели штатно установлена деталь)
-- Model -> FAILED -> Component (зафиксирован отказ узла в отчёте о выезде)
+
+Типы сущностей (`entities`):
+- `ProductLine`: линейка (строго из словаря: «Арктика», «Бриз», «Гольфстрим»; слова «витрина», «моноблок» — НЕ линейки)
+- `Model`: код модели (например, AR-210, BZ-110, GS-410)
+- `Part`: номер детали (например, P-1042, P-1042B)
+- `Component`: название узла (например, «пусковое реле», «компрессор»)
+- `ErrorCode`: код ошибки (например, E-17, E-22)
+- `Procedure`: номер регламента (например, SP-104)
+- `Supplier`: название поставщика (например, «ХолодКомплект»)
+
+Допустимые типы связей (`relations`, направление строго `subject -> type -> object`):
+- Model -> BELONGS_TO -> ProductLine (модель входит в линейку)
+- Model -> HAS_PART -> Part (в модели установлена деталь; НЕ используй HAS_PART от Part к Component!)
 - Part -> IS_A -> Component (деталь является узлом данного вида)
-- Part -> REPLACED_BY -> Part (деталь снята с производства и заменена другой деталью)
+- Part -> REPLACED_BY -> Part (деталь снята с производства и заменена новой деталью)
 - Part -> SUPPLIED_BY -> Supplier (поставщик детали)
 - ErrorCode -> INDICATES -> Component (код ошибки указывает на отказ узла)
-- ErrorCode -> FIXED_BY -> Procedure (ошибка устраняется по данному регламенту ремонта)
+- ErrorCode -> FIXED_BY -> Procedure (ошибка устраняется по регламенту SP-xxx; от кода ошибки к регламенту!)
+- Model -> FAILED -> Component (в отчёте о выезде зафиксирован отказ узла у модели; от Model к Component!)
 
-Пример:
-Текст: "Деталь P-1042 (пусковое реле) снята с производства. Вместо неё ставится деталь P-1042B. "
-       "Поставщик детали P-1042B – «ХолодКомплект»."
+Важные правила:
+1. В разделе «Состав узлов» руководства модели для КАЖДОЙ строки списка без пропусков
+   `- <узел> – деталь <P-код>, поставщик «<Поставщик>»` извлекай сразу три связи:
+   (Model HAS_PART Part), (Part IS_A Component) и (Part SUPPLIED_BY Supplier).
+2. В отчётах о выезде извлекай (Model FAILED Component) и, если указан код ошибки, (ErrorCode INDICATES Component).
+3. В регламентах ремонта извлекай (ErrorCode FIXED_BY Procedure) и (ErrorCode INDICATES Component).
+   Для плановых регламентов без кодов ошибок возвращай пустые списки `"entities": []` и `"relations": []`.
+
+Пример 1 (Руководство по эксплуатации):
+Текст: "Витрина AR-900 входит в линейку «Арктика». В AR-900 установлены узлы:\n"
+       "- пусковое реле – деталь P-9001, поставщик «ХолодКомплект»\n"
+       "- компрессор – деталь P-9002, поставщик «КомпрессорМаш»\n"
+       "Коды ошибок: E-91 – отказ узла «пусковое реле»."
 Результат:
 {
   "entities": [
-    {"type": "Part", "name": "P-1042"},
-    {"type": "Part", "name": "P-1042B"},
+    {"type": "Model", "name": "AR-900"},
+    {"type": "ProductLine", "name": "Арктика"},
+    {"type": "Part", "name": "P-9001"},
+    {"type": "Part", "name": "P-9002"},
+    {"type": "Component", "name": "пусковое реле"},
+    {"type": "Component", "name": "компрессор"},
+    {"type": "Supplier", "name": "ХолодКомплект"},
+    {"type": "Supplier", "name": "КомпрессорМаш"},
+    {"type": "ErrorCode", "name": "E-91"}
+  ],
+  "relations": [
+    {"subject_type": "Model", "subject": "AR-900", "type": "BELONGS_TO",
+     "object_type": "ProductLine", "object": "Арктика"},
+    {"subject_type": "Model", "subject": "AR-900", "type": "HAS_PART",
+     "object_type": "Part", "object": "P-9001"},
+    {"subject_type": "Part", "subject": "P-9001", "type": "IS_A",
+     "object_type": "Component", "object": "пусковое реле"},
+    {"subject_type": "Part", "subject": "P-9001", "type": "SUPPLIED_BY",
+     "object_type": "Supplier", "object": "ХолодКомплект"},
+    {"subject_type": "Model", "subject": "AR-900", "type": "HAS_PART",
+     "object_type": "Part", "object": "P-9002"},
+    {"subject_type": "Part", "subject": "P-9002", "type": "IS_A",
+     "object_type": "Component", "object": "компрессор"},
+    {"subject_type": "Part", "subject": "P-9002", "type": "SUPPLIED_BY",
+     "object_type": "Supplier", "object": "КомпрессорМаш"},
+    {"subject_type": "ErrorCode", "subject": "E-91", "type": "INDICATES",
+     "object_type": "Component", "object": "пусковое реле"}
+  ]
+}
+
+Пример 2 (Сервисный бюллетень):
+Текст: "Деталь P-9001 (пусковое реле) снята с производства. Вместо неё ставится деталь P-9001B. "
+       "Поставщик детали P-9001B – «ХолодКомплект»."
+Результат:
+{
+  "entities": [
+    {"type": "Part", "name": "P-9001"},
+    {"type": "Part", "name": "P-9001B"},
     {"type": "Component", "name": "пусковое реле"},
     {"type": "Supplier", "name": "ХолодКомплект"}
   ],
   "relations": [
-    {
-      "subject_type": "Part", "subject": "P-1042", "type": "REPLACED_BY",
-      "object_type": "Part", "object": "P-1042B"
-    },
-    {
-      "subject_type": "Part", "subject": "P-1042", "type": "IS_A",
-      "object_type": "Component", "object": "пусковое реле"
-    },
-    {
-      "subject_type": "Part", "subject": "P-1042B", "type": "SUPPLIED_BY",
-      "object_type": "Supplier", "object": "ХолодКомплект"
-    }
+    {"subject_type": "Part", "subject": "P-9001", "type": "REPLACED_BY",
+     "object_type": "Part", "object": "P-9001B"},
+    {"subject_type": "Part", "subject": "P-9001", "type": "IS_A",
+     "object_type": "Component", "object": "пусковое реле"},
+    {"subject_type": "Part", "subject": "P-9001B", "type": "SUPPLIED_BY",
+     "object_type": "Supplier", "object": "ХолодКомплект"}
   ]
 }
 
-Возвращай только строгий JSON по схеме. Извлекай только то, что действительно подтверждается текстом чанка.
+Пример 3 (Регламент ремонта):
+Текст: "Регламент SP-901 применяется при ошибке E-91. Ошибка E-91 указывает на отказ узла «пусковое реле»."
+Результат:
+{
+  "entities": [
+    {"type": "Procedure", "name": "SP-901"},
+    {"type": "ErrorCode", "name": "E-91"},
+    {"type": "Component", "name": "пусковое реле"}
+  ],
+  "relations": [
+    {"subject_type": "ErrorCode", "subject": "E-91", "type": "FIXED_BY",
+     "object_type": "Procedure", "object": "SP-901"},
+    {"subject_type": "ErrorCode", "subject": "E-91", "type": "INDICATES",
+     "object_type": "Component", "object": "пусковое реле"}
+  ]
+}
+
+Пример 4 (Отчёт о выезде):
+Текст: "Оборудование: моноблок BZ-900. На панели горел код Е-92. Диагностика показала отказ узла: датчик температуры."
+Результат:
+{
+  "entities": [
+    {"type": "Model", "name": "BZ-900"},
+    {"type": "ErrorCode", "name": "E-92"},
+    {"type": "Component", "name": "датчик температуры"}
+  ],
+  "relations": [
+    {"subject_type": "Model", "subject": "BZ-900", "type": "FAILED",
+     "object_type": "Component", "object": "датчик температуры"},
+    {"subject_type": "ErrorCode", "subject": "E-92", "type": "INDICATES",
+     "object_type": "Component", "object": "датчик температуры"}
+  ]
+}
+
+Возвращай только строгий JSON по схеме. Извлекай только то, что подтверждается текстом фрагмента.
 """
 
 
@@ -170,6 +254,9 @@ def extract_chunk(chunk: Chunk, llm: LLMClient) -> ExtractionResult:
             valid_entities[subject_ent.node_id] = subject_ent
         if object_ent.node_id not in valid_entities:
             valid_entities[object_ent.node_id] = object_ent
+
+    if not valid_relations and valid_entities and {e.type for e in valid_entities.values()} == {"Procedure"}:
+        valid_entities.clear()
 
     return ExtractionResult(
         chunk_id=chunk.chunk_id,

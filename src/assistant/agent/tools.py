@@ -15,13 +15,16 @@ TOOL_SCHEMAS: list[dict] = [
         "type": "function",
         "function": {
             "name": "search_knowledge",
-            "description": "Точный поиск по графу знаний о деталях, заменах, ошибках и регламентах ремонта.",
+            "description": (
+                "Поиск по графу знаний о конкретных моделях, линейках, кодах ошибок, узлах, "
+                "деталях, их заменах, поставщиках и регламентах ремонта."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "Вопрос для поиска по графу знаний",
+                        "description": "Вопрос с точными кодами моделей/ошибок/деталей и названиями узлов",
                     },
                 },
                 "required": ["question"],
@@ -32,13 +35,16 @@ TOOL_SCHEMAS: list[dict] = [
         "type": "function",
         "function": {
             "name": "summarize_topic",
-            "description": "Обзорный поиск по сводкам сообществ графа знаний по всему корпусу.",
+            "description": (
+                "Обзорный поиск по сводкам сообществ графа знаний: статистика частых отказов "
+                "по линейкам и моделям, перечни деталей, снятых с производства."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "Обзорный вопрос для анализа сводок сообществ",
+                        "description": "Обзорный вопрос по линейке оборудования или корпусу документов",
                     },
                 },
                 "required": ["question"],
@@ -49,7 +55,7 @@ TOOL_SCHEMAS: list[dict] = [
         "type": "function",
         "function": {
             "name": "check_stock",
-            "description": "Проверка складского остатка детали и признака снятия с производства.",
+            "description": "Проверка складского остатка детали на складе и признака снятия с производства.",
             "parameters": {
                 "type": "object",
                 "properties": {

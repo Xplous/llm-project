@@ -12,6 +12,26 @@ from assistant.infra.schemas import AgentResult, ToolStep
 
 _NUMBER = r"(?<![\w-])(?:\d{1,3}(?:[   ]\d{3})+|\d+)(?![\w-])"
 _WITH_UNIT = re.compile(rf"({_NUMBER})\s*(руб|₽|шт)")
+_STANDALONE_INT = re.compile(r"(?<![A-Za-zА-Яа-яЁё-])\b\d+\b(?!-)")
+
+AGENT_SYSTEM_PROMPT = (
+    "Ты ассистент сервисной службы компании «ПолярТех». Ты отвечаешь ТОЛЬКО по фактам из "
+    "инструментов базы знаний и учётной системы (ERP).\n"
+    "Правила выбора инструментов:\n"
+    "1. `search_knowledge(question)`: вызывай для вопросов о моделях (AR-xxx, BZ-xxx, GS-xxx), "
+    "кодах ошибок (E-xx), узлах, деталях (P-xxxx), их заменах, поставщиках и регламентах ремонта (SP-xxx). "
+    "В аргументе `question` обязательно передавай точные коды и названия узлов из вопроса.\n"
+    "2. `summarize_topic(question)`: вызывай для обзорных вопросов по линейкам и всему корпусу "
+    "(какой узел чаще всего отказывает, у какой модели больше отказов, какие детали линейки сняты).\n"
+    "3. `check_stock(part_id, warehouse)` и `get_price(part_id)`: вызывай для проверки остатка и цены "
+    "в ERP, передавая актуальную (с учётом замен!) деталь. Для `get_price(part_id)` склад НЕ нужен — "
+    "если пользователь спрашивает цену («сколько стоит»), вызывай `get_price` сразу после определения детали.\n"
+    "4. `create_service_order(part_id, warehouse, qty, model)`: если пользователь просит оформить или "
+    "создать заказ и известны актуальная деталь, модель, склад и количество из вопроса, обязательно вызови "
+    "`create_service_order` (система сама запросит подтверждение у диспетчера).\n"
+    "В финальном ответе обязательно указывай точные коды (P-xxxx, SP-xxx, BZ-xxx), названия, цены и остатки "
+    "из результатов инструментов. Никогда не выдумывай числа, цены, остатки и коды деталей."
+)
 
 
 def _digits(raw: str) -> str:
@@ -39,6 +59,19 @@ def _find_discrepancies(
     return invented
 
 
+def _normalize_call_args(raw_args: dict) -> dict:
+    args = dict(raw_args)
+    if isinstance(args.get("part_id"), str):
+        norm_part = normalize_code(args["part_id"])
+        if norm_part and code_type(norm_part) == "Part":
+            args["part_id"] = norm_part
+    if isinstance(args.get("model"), str):
+        norm_model = normalize_code(args["model"])
+        if norm_model and code_type(norm_model) == "Model":
+            args["model"] = norm_model
+    return args
+
+
 def run_agent(
     question: str,
     llm: LLMClient,
@@ -58,15 +91,7 @@ def run_agent(
     и результатами инструментов.
     """
     messages: list[dict] = [
-        {
-            "role": "system",
-            "content": (
-                "Ты ассистент сервисной службы компании «ПолярТех». Твоя задача – помогать диспетчеру "
-                "находить детали по графу знаний, проверять остатки и цены в учётной системе (ERP) "
-                "и подготавливать сервисные заказы. Всегда используй доступные инструменты. "
-                "Не выдумывай коды деталей, цены и остатки."
-            ),
-        },
+        {"role": "system", "content": AGENT_SYSTEM_PROMPT},
         {"role": "user", "content": question},
     ]
 
@@ -76,10 +101,12 @@ def run_agent(
 
     known_parts: set[str] = {c for c in find_codes(question) if code_type(c) == "Part"}
     all_known_codes: set[str] = set(find_codes(question))
-    allowed_numbers: set[str] = set(re.findall(r"\d+", question))
-    question_numbers: set[str] = set(re.findall(r"\b\d+\b", question))
+    allowed_numbers: set[str] = set()
+    question_numbers: set[str] = set(_STANDALONE_INT.findall(question))
 
-    kb_refused = False
+    kb_refused_any = False
+    erp_not_found_any = False
+    has_positive_evidence = False
     executed_tools_count = 0
     max_turns = max_steps + 8
 
@@ -109,41 +136,46 @@ def run_agent(
                 messages.append(tool_message(call, {"error": err_msg}))
                 continue
 
-            part_in_args = call.arguments.get("part_id")
+            args = _normalize_call_args(call.arguments)
+
+            part_in_args = args.get("part_id")
             if part_in_args:
-                norm_part = normalize_code(part_in_args)
+                norm_part = normalize_code(part_in_args) if isinstance(part_in_args, str) else None
                 if not norm_part or norm_part not in known_parts:
                     err_msg = (
                         f"Номер детали {part_in_args} не подтверждён контекстом. "
                         "Сначала вызовите search_knowledge для поиска детали."
                     )
-                    steps.append(ToolStep(tool=call.name, args=call.arguments, result=None, error=err_msg))
+                    steps.append(ToolStep(tool=call.name, args=args, result=None, error=err_msg))
                     messages.append(tool_message(call, {"error": err_msg}))
                     continue
 
             if call.name == "create_service_order":
-                qty = call.arguments.get("qty")
-                if qty is None or str(qty) not in question_numbers:
+                qty = args.get("qty")
+                if qty is None or isinstance(qty, bool) or not isinstance(qty, int) or str(qty) not in question_numbers:
                     err_msg = "Количество деталей не указано пользователем в вопросе. Уточните количество."
-                    steps.append(ToolStep(tool=call.name, args=call.arguments, result=None, error=err_msg))
+                    steps.append(ToolStep(tool=call.name, args=args, result=None, error=err_msg))
                     messages.append(tool_message(call, {"error": err_msg}))
                     continue
 
                 if not confirm:
-                    steps.append(ToolStep(tool=call.name, args=call.arguments, result=None, error=None))
                     return AgentResult(
-                        answer="Требуется подтверждение диспетчера для оформления сервисного заказа.",
+                        answer=(
+                            f"Требуется подтверждение диспетчера для заказа детали {args.get('part_id', '')} "
+                            f"(модель {args.get('model', '')}, склад {args.get('warehouse', '')}, "
+                            f"количество {qty})."
+                        ),
                         steps=steps,
                         sources=sorted(sources),
                         refused=False,
                         needs_confirmation=True,
-                        pending_action={"tool": call.name, "args": call.arguments},
+                        pending_action={"tool": call.name, "args": args},
                     )
 
-            cache_key = (call.name, json.dumps(call.arguments, sort_keys=True, ensure_ascii=False))
+            cache_key = (call.name, json.dumps(args, sort_keys=True, ensure_ascii=False))
             if cache_key in tool_cache:
                 cached_res = tool_cache[cache_key]
-                steps.append(ToolStep(tool=call.name, args=call.arguments, result=cached_res, error=None))
+                steps.append(ToolStep(tool=call.name, args=args, result=cached_res, error=None))
                 messages.append(tool_message(call, cached_res))
                 continue
 
@@ -153,16 +185,19 @@ def run_agent(
 
             for attempt in range(3):
                 try:
-                    result_dict = tool_fn(**call.arguments)
+                    result_dict = tool_fn(**args)
                     exec_error = None
                     break
                 except ErpUnavailable as e:
                     exec_error = f"ERP недоступна: {e}"
                     if attempt == 2:
                         break
+                except TypeError as e:
+                    exec_error = f"Некорректные аргументы инструмента: {e}"
+                    break
 
             if exec_error is not None:
-                steps.append(ToolStep(tool=call.name, args=call.arguments, result=None, error=exec_error))
+                steps.append(ToolStep(tool=call.name, args=args, result=None, error=exec_error))
                 messages.append(tool_message(call, {"error": exec_error}))
                 continue
 
@@ -172,7 +207,7 @@ def run_agent(
                 if (isinstance(result_dict, dict) and "error" in result_dict)
                 else None
             )
-            steps.append(ToolStep(tool=call.name, args=call.arguments, result=result_dict, error=step_error))
+            steps.append(ToolStep(tool=call.name, args=args, result=result_dict, error=step_error))
             tool_cache[cache_key] = result_dict
 
             res_str = json.dumps(result_dict, ensure_ascii=False)
@@ -185,8 +220,16 @@ def run_agent(
                     known_parts.add(code)
 
             if isinstance(result_dict, dict):
-                if result_dict.get("refused") is True:
-                    kb_refused = True
+                if call.name in ("search_knowledge", "summarize_topic"):
+                    if result_dict.get("refused") is True:
+                        kb_refused_any = True
+                    else:
+                        has_positive_evidence = True
+                elif step_error is None:
+                    has_positive_evidence = True
+                elif isinstance(step_error, str) and step_error.endswith("не найдена"):
+                    erp_not_found_any = True
+
                 if "sources" in result_dict and isinstance(result_dict["sources"], list):
                     for s in result_dict["sources"]:
                         sources.add(s.split("#")[0])
@@ -200,7 +243,7 @@ def run_agent(
     else:
         candidate_text = messages[-1]["content"].strip()
 
-    if kb_refused and ("в базе знаний не найдено" in candidate_text.lower() or not candidate_text):
+    if (kb_refused_any or erp_not_found_any) and not has_positive_evidence:
         return AgentResult(
             answer="В базе знаний не найдено.",
             steps=steps,
@@ -235,7 +278,7 @@ def run_agent(
         answer=candidate_text,
         steps=steps,
         sources=sorted(sources),
-        refused=kb_refused and "в базе знаний не найдено" in candidate_text.lower(),
+        refused=False,
         needs_confirmation=False,
         pending_action=None,
     )

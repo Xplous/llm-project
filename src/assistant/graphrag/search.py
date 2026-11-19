@@ -10,6 +10,38 @@ from assistant.infra.llm import LLMClient
 from assistant.infra.schemas import MAP_SCHEMA, Answer, KnowledgeBase
 
 
+def _add_replacement_chains_and_details(
+    graph: nx.DiGraph,
+    collected_edges: set[tuple[str, str]],
+) -> None:
+    """Добавляет цепочки REPLACED_BY от найденных деталей и их связи SUPPLIED_BY / IS_A."""
+    part_nodes = {
+        node for edge in collected_edges for node in edge if graph.nodes[node].get("type") == "Part"
+    }
+    all_parts: set[str] = set(part_nodes)
+    for part in part_nodes:
+        curr = part
+        visited_parts = {curr}
+        while True:
+            next_part = None
+            for succ in graph.successors(curr):
+                if graph.edges[curr, succ].get("type") == "REPLACED_BY":
+                    collected_edges.add((curr, succ))
+                    all_parts.add(succ)
+                    if succ not in visited_parts:
+                        next_part = succ
+                        visited_parts.add(succ)
+                    break
+            if next_part is None:
+                break
+            curr = next_part
+
+    for part in all_parts:
+        for succ in graph.successors(part):
+            if graph.edges[part, succ].get("type") in ("SUPPLIED_BY", "IS_A"):
+                collected_edges.add((part, succ))
+
+
 def local_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
     """Отвечает на вопрос о конкретных сущностях по фактам из графа.
 
@@ -42,6 +74,7 @@ def local_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
 
     undirected = kb.graph.to_undirected(as_view=True)
     collected_edges: set[tuple[str, str]] = set()
+    distances: dict[str, int] = {}
 
     if len(anchors) >= 2:
         anchor_list = sorted(anchors)
@@ -57,39 +90,33 @@ def local_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
                             if kb.graph.has_edge(b, a):
                                 collected_edges.add((b, a))
 
-        part_nodes = {
-            node for edge in collected_edges for node in edge if kb.graph.nodes[node].get("type") == "Part"
-        }
-        for part in part_nodes:
-            curr = part
-            visited_parts = {curr}
-            while True:
-                next_part = None
-                for succ in kb.graph.successors(curr):
-                    if kb.graph.edges[curr, succ].get("type") == "REPLACED_BY":
-                        collected_edges.add((curr, succ))
-                        if succ not in visited_parts:
-                            next_part = succ
-                            visited_parts.add(succ)
-                        break
-                if next_part is None:
-                    break
-                curr = next_part
+        _add_replacement_chains_and_details(kb.graph, collected_edges)
+        ordered_edges = sorted(collected_edges)
     else:
         anchor = next(iter(anchors))
-        lengths = nx.single_source_shortest_path_length(undirected, anchor, cutoff=2)
-        neighborhood = set(lengths.keys())
+        distances = nx.single_source_shortest_path_length(undirected, anchor, cutoff=2)
         for a, b in kb.graph.edges:
-            if a in neighborhood and b in neighborhood:
+            if a in distances and b in distances and min(distances[a], distances[b]) <= 1:
                 collected_edges.add((a, b))
 
-    if not collected_edges:
+        _add_replacement_chains_and_details(kb.graph, collected_edges)
+        ordered_edges = sorted(
+            collected_edges,
+            key=lambda edge: (
+                0 if anchor in edge else 1,
+                min(distances.get(edge[0], 99), distances.get(edge[1], 99)),
+                edge[0],
+                edge[1],
+            ),
+        )
+
+    if not ordered_edges:
         return Answer(text="В базе знаний не найдено.", sources=[], facts=[], refused=True)
 
     facts: list[str] = []
     doc_sources: set[str] = set()
 
-    for a, b in sorted(collected_edges):
+    for a, b in ordered_edges:
         data = kb.graph.edges[a, b]
         rel_type = data.get("type", "")
         a_name = kb.graph.nodes[a].get("name", a)
@@ -113,9 +140,15 @@ def local_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
         {
             "role": "system",
             "content": (
-                "Ты ассистент сервисной службы «ПолярТех». Отвечай на вопрос строго по предоставленным фактам "
-                "из базы знаний. Если в фактах есть замена детали (REPLACED_BY), обязательно называй в ответе "
-                "актуальную финальную деталь цепочки замен. Не выдумывай информацию."
+                "Ты ассистент сервисной службы «ПолярТех». Отвечай на вопрос кратко, точно и строго по "
+                "приведённым фактам. Сохраняй точные коды (SP-xxx, P-xxxx, AR-xxx, E-xx) и названия.\n"
+                "Правила:\n"
+                "- Если спрашивается о регламенте (SP-xxx), укажи точный код регламента из связи FIXED_BY.\n"
+                "- Если спрашивается, какую деталь заказать / ставится / поставщика детали и у исходной "
+                "детали есть цепочка замен REPLACED_BY, обязательно дойди до ПОСЛЕДНЕЙ актуальной детали "
+                "в этой цепочке (и её поставщика SUPPLIED_BY).\n"
+                "- Если спрашивается, в каких моделях стояла снятая деталь, перечисли все модели со связью HAS_PART.\n"
+                "- Не выдумывай факты вне приведённого списка."
             ),
         },
         {"role": "user", "content": f"Вопрос: {question}\n\nФакты из базы знаний:\n{facts_text}"},
@@ -137,20 +170,30 @@ def global_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
     Шаг reduce: частичные ответы с оценкой выше 0 объединяются в итоговый ответ.
     Если таких ответов нет, возвращается `Answer(..., refused=True)`.
     """
-    partial_answers: list[str] = []
+    codes = find_codes(question)
+    if any(f"{code_type(c)}:{c}" not in kb.graph for c in codes):
+        return Answer(text="В базе знаний не найдено.", sources=[], facts=[], refused=True)
+
+    scored_answers: list[tuple[int, str]] = []
     all_sources: set[str] = set()
 
     for comm in kb.communities:
         messages = [
             {
                 "role": "system",
-                "content": "Ты эксперт по сервисному обслуживанию «ПолярТех». Оцени полезность сводки сообщества.",
+                "content": (
+                    "Ты аналитик «ПолярТех». Ответь на вопрос строго по сводке сообщества и оцени полезность "
+                    "от 0 до 10 по схеме MAP_SCHEMA.\n"
+                    "Ставь score=0, если:\n"
+                    "- в сводке нет прямого ответа на вопрос;\n"
+                    "- вопрос о цене, остатке на складе или о коде, которого нет в сводке."
+                ),
             },
             {
                 "role": "user",
                 "content": (
                     f"Вопрос: {question}\n\nСводка сообщества:\n{comm.summary}\n\n"
-                    f"Ответь на вопрос по этой сводке и оцени полезность ответа от 0 до 10 по схеме MAP_SCHEMA."
+                    "Верни JSON с полями answer и score."
                 ),
             },
         ]
@@ -159,24 +202,29 @@ def global_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
             data = json.loads(resp.content)
             if isinstance(data, dict) and "score" in data and "answer" in data:
                 score = int(data["score"])
-                if score > 0 and data["answer"].strip():
-                    partial_answers.append(data["answer"].strip())
+                ans_text = str(data["answer"]).strip()
+                if score > 0 and ans_text:
+                    scored_answers.append((score, ans_text))
                     for node in comm.nodes:
                         for s in kb.graph.nodes[node].get("sources", []):
                             all_sources.add(s.split("#")[0])
         except Exception:
             continue
 
-    if not partial_answers:
+    if not scored_answers:
         return Answer(text="В базе знаний не найдено.", sources=[], facts=[], refused=True)
 
-    partials_text = "\n".join(f"- {ans}" for ans in partial_answers)
+    scored_answers.sort(key=lambda item: -item[0])
+    partial_answers = [ans for _, ans in scored_answers]
+    partials_text = "\n".join(f"- [оценка {score}] {ans}" for score, ans in scored_answers)
+
     reduce_messages = [
         {
             "role": "system",
             "content": (
-                "Ты ассистент сервисной службы «ПолярТех». Сформируй итоговый ответ на основе "
-                "полезных частичных ответов по сводкам."
+                "Ты ассистент сервисной службы «ПолярТех». Объедини полезные частичные ответы в краткий "
+                "и точный итоговый ответ. Сохраняй точные коды моделей и деталей (P-xxxx, BZ-xxx), "
+                "названия узлов и линеек. Не выдумывай факты."
             ),
         },
         {
@@ -184,7 +232,7 @@ def global_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
             "content": (
                 f"Вопрос: {question}\n\n"
                 f"Полезные частичные ответы:\n{partials_text}\n\n"
-                f"Сформируй итоговый ответ."
+                "Сформируй итоговый ответ."
             ),
         },
     ]
