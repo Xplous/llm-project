@@ -1,0 +1,388 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage{fontspec}
+\usepackage[russian]{babel}
+\usepackage[a4paper,left=19mm,right=19mm,top=19mm,bottom=19mm]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyvrb}
+\usepackage[hidelinks,colorlinks=true,linkcolor=oiBlue,urlcolor=oiBlue,citecolor=oiBlue]{hyperref}
+\usepackage[russian,noabbrev]{cleveref}
+
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+\setmonofont[Scale=0.86]{Consolas}
+\emergencystretch=1.5em
+
+\usetikzlibrary{positioning,arrows.meta,calc,fit}
+\pgfplotsset{compat=1.18}
+
+% Okabe-Ito colorblind-friendly palette
+\definecolor{oiBlue}{HTML}{0072B2}
+\definecolor{oiTeal}{HTML}{009E73}
+\definecolor{oiOrange}{HTML}{D55E00}
+\definecolor{oiPurple}{HTML}{CC79A7}
+\definecolor{oiSlate}{HTML}{5C6B73}
+\definecolor{oiDark}{HTML}{1E293B}
+
+% siunitx configuration
+\sisetup{
+  detect-all,
+  output-decimal-marker = {.},
+  group-separator = {\,},
+  group-minimum-digits = 4,
+  table-number-alignment = center,
+  per-mode = symbol
+}
+
+% cleveref Russian labels
+\crefname{figure}{рис.}{рис.}
+\Crefname{figure}{Рис.}{Рис.}
+\crefname{table}{табл.}{табл.}
+\Crefname{table}{Табл.}{Табл.}
+\crefname{section}{разд.}{разд.}
+\Crefname{section}{Разд.}{Разд.}
+
+% Section typography (NeurIPS / IEEE inspired clean hierarchy)
+\titleformat{\section}{\large\bfseries\color{oiDark}}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{10pt plus 2pt minus 1pt}{4pt plus 1pt}
+\titleformat{\subsection}{\normalsize\bfseries\color{oiDark}}{\thesubsection}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{6pt plus 1pt minus 1pt}{2pt}
+
+% Compact lists
+\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=2pt,topsep=3pt,parsep=0pt}
+
+% Header & Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\color{oiSlate} <<ПолярТех>> --- Ассистент сервисной службы (ITMO LLM Project)}
+\fancyhead[R]{\footnotesize\color{oiSlate} Версия \texttt{v1.0}}
+\fancyfoot[L]{\footnotesize\color{oiSlate} Репозиторий: \url{https://github.com/Xplous/llm-project}}
+\fancyfoot[R]{\footnotesize\color{oiSlate} Стр.~\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\setlength{\headheight}{13pt}
+
+% Unified TikZ styles
+\tikzset{
+  sysbox/.style={
+    rectangle,
+    rounded corners=2pt,
+    draw=black!75,
+    line width=0.6pt,
+    inner sep=6pt,
+    align=center,
+    font=\scriptsize
+  },
+  agentbox/.style={sysbox, fill=blue!5, draw=oiBlue!80, line width=0.8pt},
+  neutralbox/.style={sysbox, fill=gray!8},
+  tealbox/.style={sysbox, fill=teal!6, draw=oiTeal!80},
+  gatebox/.style={sysbox, fill=red!5, draw=oiOrange!85, line width=0.7pt},
+  flowarrow/.style={-{Stealth[length=5pt]}, line width=0.65pt, draw=black!75},
+  alertarrow/.style={-{Stealth[length=5pt]}, line width=0.7pt, draw=oiOrange!85},
+  edgelabel/.style={font=\tiny\ttfamily, fill=white, inner sep=1.5pt, rounded corners=1pt}
+}
+
+\begin{document}
+
+% ==================== TITLE BLOCK ====================
+\begin{center}
+  {\Large\bfseries\color{oiDark} Ассистент сервисной службы <<ПолярТех>>:\\
+  Graph~RAG и агент с инструментами ERP}\par
+  \medskip
+  {\footnotesize\color{oiSlate}
+    Репозиторий: \url{https://github.com/Xplous/llm-project} \quad|\quad
+    Модель LLM: \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama, RTX~4070~SUPER)\par
+    Эмбеддинги: \texttt{bge-m3} \quad|\quad
+    Метка версии: \texttt{v1.0}
+  }
+\end{center}
+\noindent\rule{\linewidth}{0.8pt}
+
+% ==================== 1. ЗАДАЧА ====================
+\section{Задача}\label{sec:task}
+
+Компания <<ПолярТех>> обслуживает коммерческое и промышленное холодильное оборудование (витрины, моноблоки, чиллеры). Диспетчер сервисной службы принимает заявки, содержащие модель оборудования и код ошибки панели управления (например, <<\texttt{AR-210}, код \texttt{E-17}>>). Задача ассистента --- оперативно определить отказавший узел, регламент ремонта и актуальную деталь с учётом снятия устаревших позиций с производства и цепочек замен (\texttt{REPLACED\_BY}), проверить остатки по \num{4} складам (Москва, Санкт-Петербург, Казань, Новосибирск) и цены в учётной системе (ERP), а затем подготовить сервисный заказ с обязательным подтверждением человеком.
+
+Плоский векторный поиск (Flat~RAG) системно ошибается в двух классах сценариев:
+\begin{enumerate}
+  \item \textbf{Многошаговые замены (\texttt{dev-06}):} на вопросе <<Какую деталь заказать при ошибке \texttt{E-17} на \texttt{AR-210}?>> плоский RAG извлекает фрагмент руководства \texttt{manual\_AR-210.md} и отвечает снятой с производства деталью \texttt{P-1042}, не проходя по сервисному бюллетеню \texttt{bulletin\_SB-2025-03.md} к актуальной замене \texttt{P-1042B}.
+  \item \textbf{Оперативные данные ERP (\texttt{dev-17}, \texttt{dev-20}):} на вопросе <<Сколько штук детали \texttt{P-1118B} есть на складе в Казани?>> плоский RAG получает точность \num{0.000}, так как динамические остатки и цены отсутствуют в статических документах и доступны только через API учётной системы.
+\end{enumerate}
+
+% ==================== 2. РЕШЕНИЕ ====================
+\section{Архитектура решения и ReAct-конвейер}\label{sec:arch}
+
+Система объединяет три взаимодействующих контура (\cref{fig:arch}), реализованных в соответствии с требованиями FR-1--FR-10:
+\begin{itemize}
+  \item \textbf{Извлечение и граф знаний (FR-1, FR-2):} модуль \texttt{extraction.py} извлекает сущности и типизированные связи по строгой JSON~Schema (\texttt{EXTRACTION\_SCHEMA}) с лимитом \num{4096} токенов и \num{4} синтетическими few-shot примерами без утечки эталона \texttt{gold\_dev.json}. Все коды заземляются на исходный чанк (\texttt{find\_codes}), названия нормализуются по словарю (\texttt{canonical\_name}), а для плановых регламентов без связей изолированные узлы \texttt{Procedure} не добавляются. Модуль \texttt{graph\_builder.py} строит ориентированный граф \texttt{nx.DiGraph} (\num{118} узлов, \num{279} рёбер), фиксируя источники на обоих концах ребра и разрешая взаимные конфликты \texttt{REPLACED\_BY} в пользу ребра с большим весом.
+  \item \textbf{Сообщества и два режима поиска (FR-3--FR-5):} модуль \texttt{communities.py} разбивает граф методом Лувена (\texttt{seed=7}) на \num{8} сообществ. Для сообществ с линейками оборудования код детерминированно подсчитывает лидеров отказов и цепочки снятых деталей, а для тематических сообществ без линеек запрещает модели выдумывать линейки и рейтинги. Локальный поиск (\texttt{local\_search}) собирает пути длиной $\le 3$ между опорными узлами (или 2-hop окрестность при одном якоре), автоматически разворачивает цепочки \texttt{REPLACED\_BY} вместе со связями \texttt{SUPPLIED\_BY} и \texttt{IS\_A} и мгновенно возвращает отказ (\texttt{refused=True}) при отсутствии кода в графе. Глобальный поиск (\texttt{global\_search}) проверяет неизвестные коды до запуска цикла и выполняет Map-Reduce (\texttt{MAP\_SCHEMA}) по сводкам сообществ.
+  \item \textbf{Инструменты и ReAct-агент (FR-6--FR-10):} модуль \texttt{tools.py} предоставляет \num{5} типизированных инструментов с валидацией аргументов (\num{4} склада ERP, формат кода детали). Модуль \texttt{agent.py} ведёт ReAct-цикл (\texttt{max\_steps=6}), нормализует коды, проверяет заземление деталей и чисел, выполняет до \num{3} попыток при \texttt{ErpUnavailable} и перехватывает \texttt{create\_service\_order} при \texttt{confirm=False} в \texttt{pending\_action}.
+\end{itemize}
+
+\begin{figure}[bp]
+  \centering
+  \begin{tikzpicture}[node distance=8mm and 10mm]
+    \node[neutralbox, text width=24mm] (disp) {\textbf{Диспетчер}\\Модель: \texttt{AR-210}\\Ошибка: \texttt{E-17}};
+
+    \node[agentbox, right=of disp, text width=34mm] (agent) {%
+      \textbf{ReAct-агент}\\
+      Thought--Action цикл\\
+      Лимит \texttt{max\_steps=6}\\
+      Заземление кодов и чисел\\
+      Дедупликация шагов
+    };
+
+    \node[neutralbox, right=14mm of agent, text width=54mm] (erp) {%
+      \textbf{Учётная система (ERP)}\\
+      \texttt{check\_stock} (\num{4} склада), \texttt{get\_price}\\
+      До \num{3} попыток при \texttt{ErpUnavailable}
+    };
+
+    \node[tealbox, above=5mm of erp, text width=54mm] (graph) {%
+      \textbf{Граф знаний (Graph~RAG)}\\
+      \num{118} узлов, \num{279} рёбер, \num{8} сообществ\\
+      \texttt{local\_search} (пути $\le 3$ + \texttt{REPLACED\_BY}) / Map-Reduce
+    };
+
+    \node[gatebox, below=5mm of erp, text width=54mm] (gate) {%
+      \textbf{Шлюз безопасности (FR-9, FR-10)}\\
+      \texttt{confirm=False}: перехват \texttt{create\_service\_order}\\
+      Возврат \texttt{pending\_action} диспетчеру
+    };
+
+    \draw[flowarrow] (disp.east) -- (agent.west);
+    \draw[flowarrow] (agent.east) -- (erp.west);
+    \draw[flowarrow] (agent.east) -- ++(6mm,0) |- (graph.west);
+    \draw[alertarrow] (agent.east) -- ++(6mm,0) |- (gate.west);
+  \end{tikzpicture}
+  \caption{Архитектура ассистента <<ПолярТех>>: взаимодействие ReAct-агента с графом знаний, ERP и шлюзом подтверждения человеком.}\label{fig:arch}
+\end{figure}
+
+% ==================== 3. РЕЗУЛЬТАТЫ ====================
+\section{Результаты и сравнительный бенчмарк}\label{sec:results}
+
+Оценка выполнена на \num{24} контрольных вопросах \path{questions_dev.jsonl} (\texttt{temperature=0}, \texttt{seed=7}, чистый кеш \path{artifacts/llm_cache/}, модель \texttt{qwen3:4b-instruct-2507-q4\_K\_M}). Итоговые показатели четырёх режимов приведены в \cref{tab:bench} и визуализированы на \cref{fig:bench}.
+
+\begin{table}[tbp]
+  \centering
+  \caption{Сравнение четырёх режимов работы ассистента на \num{24} вопросах \texttt{questions\_dev.jsonl}. Звёздочкой отмечено ложное срабатывание метрики \texttt{fabricated} на повторе <<\SI{2}{\text{шт.}}>> из вопроса \texttt{dev-21} (\cref{sec:errors}).}\label{tab:bench}
+  \footnotesize
+  \begin{tabular}{@{} l S[table-format=1.3] S[table-format=1.3] S[table-format=1.3] S[table-format=1.3] @{}}
+    \toprule
+    \textbf{Метрика} & {\textbf{Baseline (Flat)}} & {\textbf{Local (Graph)}} & {\textbf{Global (Graph)}} & {\textbf{Agent (Граф+ERP)}} \\
+    \midrule
+    \textbf{Общая точность (Accuracy)} & 0.500 & \bfseries 0.792 & 0.417 & \bfseries 0.917 \\
+    \quad Вопросы \texttt{local} (\num{5}) & 1.000 & \bfseries 1.000 & 0.800 & \bfseries 1.000 \\
+    \quad Вопросы \texttt{multihop} (\num{7}) & 0.571 & \bfseries 1.000 & 0.143 & \bfseries 1.000 \\
+    \quad Вопросы \texttt{global} (\num{4}) & 0.000 & \bfseries 1.000 & 0.500 & 0.750 \\
+    \quad Вопросы \texttt{tool} (\num{5}) & 0.000 & 0.000 & 0.000 & \bfseries 0.800 \\
+    \quad Вопросы \texttt{refusal} (\num{3}) & 1.000 & \bfseries 1.000 & \bfseries 1.000 & \bfseries 1.000 \\
+    \midrule
+    Выдуманные факты (Fabricated) & \bfseries 0.000 & {0.042$^*$} & 0.042 & 0.042 \\
+    Полнота источников (Source Recall) & 0.856 & \bfseries 1.000 & 0.719 & \bfseries 1.000 \\
+    Отклонённые вызовы инструментов & {---} & {---} & {---} & 0.032 \\
+    Вызовов модели на вопрос & {1.00} & {\bfseries 0.88} & {7.67} & {4.83} \\
+    Токенов на вопрос & {\num{1356.7}} & {\bfseries \num{1113.5}} & {\num{3887.9}} & {\num{5130.4}} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[tbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      name=accplot,
+      ybar=1.2pt,
+      bar width=4.2pt,
+      width=0.58\textwidth,
+      height=48mm,
+      ymin=0, ymax=1.22,
+      ylabel={Доля верных ответов},
+      ylabel style={font=\scriptsize},
+      title={\textbf{Точность по типам вопросов}},
+      title style={font=\footnotesize},
+      symbolic x coords={Local (5), Multihop (7), Global (4), Tool (5), Refusal (3), Все (24)},
+      xtick=data,
+      xticklabel style={font=\tiny, rotate=12, anchor=east},
+      yticklabel style={font=\scriptsize},
+      axis x line*=bottom,
+      axis y line*=left,
+      ymajorgrids=true,
+      grid style={dashed, black!20},
+      axis on top=false,
+      enlarge x limits=0.11,
+      legend style={at={(0.5,0.99)}, anchor=north, legend columns=4, font=\tiny, draw=black!20, fill=white}
+    ]
+      \addplot[fill=oiSlate!85, draw=none] table[x=category, y=baseline, col sep=comma]{report/benchmark_accuracy.csv};
+      \addplot[fill=oiTeal!85, draw=none] table[x=category, y=local, col sep=comma]{report/benchmark_accuracy.csv};
+      \addplot[fill=oiPurple!85, draw=none] table[x=category, y=global, col sep=comma]{report/benchmark_accuracy.csv};
+      \addplot[fill=oiBlue!85, draw=none] table[x=category, y=agent, col sep=comma]{report/benchmark_accuracy.csv};
+      \legend{Flat RAG, Local, Global, Agent}
+    \end{axis}
+
+    \begin{axis}[
+      at={($(accplot.south east)+(13mm,0)$)},
+      anchor=south west,
+      ybar,
+      bar width=13pt,
+      width=0.38\textwidth,
+      height=48mm,
+      ymin=0, ymax=6200,
+      ylabel={Токенов на вопрос},
+      ylabel style={font=\scriptsize},
+      title={\textbf{Стоимость режимов}},
+      title style={font=\footnotesize},
+      symbolic x coords={Local, Flat RAG, Global, Agent},
+      xtick=data,
+      xticklabel style={font=\tiny},
+      yticklabel style={font=\scriptsize},
+      axis x line*=bottom,
+      axis y line*=left,
+      ymajorgrids=true,
+      grid style={dashed, black!20},
+      axis on top=false,
+      enlarge x limits=0.22,
+      nodes near coords,
+      nodes near coords style={font=\tiny\bfseries, color=oiDark},
+      every node near coord/.append style={/pgf/number format/fixed, /pgf/number format/precision=0}
+    ]
+      \addplot[fill=oiBlue!75, draw=none] table[x=mode, y=tokens, col sep=comma]{report/benchmark_tokens.csv};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Точность четырёх режимов по категориям вопросов (слева) и удельная стоимость в токенах на вопрос (справа).}\label{fig:bench}
+\end{figure}
+
+\textbf{Качество извлечения (\texttt{eval\_extraction.json}, \num{16} эталонных документов \texttt{gold\_dev.json}):} связи --- Precision~\num{1.000}, Recall~\num{1.000} (\num{161} из \num{161}); сущности --- Precision~\num{1.000}, Recall~\num{1.000} (\num{165} из \num{165}); отброшено проверками заземления (\texttt{dropped}): \num{0}.
+
+\textbf{Стоимость индексации (\texttt{index\_stats.json}):} \num{80} документов (\num{92} чанка), \num{118} узлов, \num{279} рёбер, \num{8} сообществ, \num{0} отброшенных элементов, \num{0} конфликтов. Затраты LLM: \num{100} вызовов (\num{20} попаданий в кеш), \num{228614} prompt-токенов и \num{40812} completion-токенов. Повторный прогон всех \num{5} оценок по закоммиченному кешу полностью воспроизводит числа \cref{tab:bench}.
+
+% ==================== 4. ГДЕ ГРАФ ПОМОГАЕТ И ГДЕ УСТУПАЕТ ====================
+\section{Где граф помогает и где уступает}\label{sec:compare}
+
+\textbf{Пример~1 (преимущество графа и агента --- \texttt{dev-06}, \texttt{dev-17}, \texttt{dev-22}--\texttt{dev-24}):} на вопросе <<Ошибка \texttt{E-17} на \texttt{AR-210}. Какую деталь заказать, есть ли она на складе в Казани и сколько она стоит?>> плоский RAG останавливается на устаревшей детали \texttt{P-1042} и не имеет доступа к ERP. В графе знаний (\cref{fig:subgraph}) \texttt{local\_search} проходит путь длиной \num{3} ребра \texttt{AR-210 -> P-1042 -> пусковое реле <- E-17}, автоматически разворачивает цепочку \texttt{P-1042 -> REPLACED\_BY -> P-1042B -> SUPPLIED\_BY -> ХолодКомплект}, после чего агент запрашивает ERP и возвращает точный ответ (\SI{3}{\text{шт.}}, \SI{2630}{\text{руб.}}). На вопросах отказа (\texttt{dev-22}--\texttt{dev-24}) граф мгновенно возвращает \texttt{refused=True} за \num{0} вызовов LLM против \num{1357} токенов у плоского RAG.
+
+\textbf{Пример~2 (где граф уступает по стоимости или точности --- \texttt{dev-01}--\texttt{dev-05}, \texttt{dev-14}):} на простых однохоповых вопросах \texttt{local} (\texttt{dev-01}--\texttt{dev-05}) плоский RAG достигает тех же \num{100}\% (\num{5}/\num{5}) за \num{1} вызов модели без затрат на предварительную графовую индексацию (\num{269426} токенов), тогда как агент тратит в среднем \num{4.83} вызова (\num{5130.4} токена). На обзорном вопросе \texttt{dev-14} (<<Какой узел чаще всего отказывает в линейке <<Гольфстрим>>?>>) маршрутизация через \texttt{summarize\_topic} (Map-Reduce) привела к путанице модели-лидера (\texttt{GS-510}, \num{4} отказа) с узлом-лидером (<<циркуляционный насос>>, \num{8} отказов), тогда как прямой \texttt{local\_search} по подграфу линейки ответил верно.
+
+\begin{figure}[tbp]
+  \centering
+  \begin{tikzpicture}[node distance=10mm and 16mm]
+    \node[agentbox, text width=24mm] (model) {\tiny Model:\\\textbf{\texttt{AR-210}}};
+    \node[neutralbox, dashed, right=of model, text width=26mm] (pold) {\tiny Part (снята):\\\textbf{\texttt{P-1042}}};
+    \node[tealbox, right=of pold, text width=26mm, line width=0.8pt] (pnew) {\tiny Part (замена):\\\textbf{\texttt{P-1042B}}};
+
+    \node[gatebox, below=of model, text width=24mm] (err) {\tiny ErrorCode:\\\textbf{\texttt{E-17}}};
+    \node[sysbox, fill=orange!6, draw=oiOrange!70, below=of pold, text width=26mm] (comp) {\tiny Component:\\\textbf{пусковое реле}};
+    \node[sysbox, fill=purple!5, draw=oiPurple!80, below=of pnew, text width=26mm] (supp) {\tiny Supplier:\\\textbf{ХолодКомплект}};
+
+    \node[sysbox, fill=cyan!5, draw=oiBlue!60, below=7mm of err, text width=24mm] (proc) {\tiny Procedure:\\\textbf{\texttt{SP-104}}};
+
+    \draw[flowarrow] (model) -- node[edgelabel]{HAS\_PART} (pold);
+    \draw[alertarrow] (pold) -- node[edgelabel, text=oiOrange]{\textbf{REPLACED\_BY}} (pnew);
+    \draw[flowarrow] (pold) -- node[edgelabel]{IS\_A} (comp);
+    \draw[flowarrow] (err) -- node[edgelabel]{INDICATES} (comp);
+    \draw[flowarrow] (pnew) -- node[edgelabel]{SUPPLIED\_BY} (supp);
+    \draw[flowarrow] (err) -- node[edgelabel]{FIXED\_BY} (proc);
+  \end{tikzpicture}
+  \caption{Фрагмент графа знаний вокруг \texttt{AR-210}: \texttt{local\_search} проходит путь длиной \num{3} ребра между \texttt{AR-210} и \texttt{E-17}, затем разворачивает цепочку \texttt{REPLACED\_BY} и поставщика \texttt{SUPPLIED\_BY}.}\label{fig:subgraph}
+\end{figure}
+
+% ==================== 5. АНАЛИЗ ОШИБОК ====================
+\section{Анализ ошибок системы и оптимизация}\label{sec:errors}
+
+В ходе итеративной отладки были разобраны ошибки на всех трёх этапах конвейера:
+\begin{enumerate}
+  \item \textbf{Этап извлечения (\texttt{extraction.py}):} при лимите \texttt{max\_tokens=1024} длинные руководства обрывались на середине JSON (Recall связей \num{0.329}, \num{50} рёбер). После увеличения лимита до \num{4096} Recall вырос до \num{0.590}, но на \num{5} из \num{12} руководств (\texttt{AR-310}, \texttt{AR-320}, \texttt{BZ-210}, \texttt{GS-510}, \texttt{GS-520}) модель имитировала 1-пунктовый пример из промпта и извлекала только первую деталь. Добавление второго пункта в синтетический пример и явного правила извлечения всех строк довело качество до \num{1.000}/\num{1.000} и \num{279} рёбер (\cref{tab:extraction}).
+  \item \textbf{Этап сообществ и поиска (\texttt{communities.py}, \texttt{search.py}):} при общем промпте сводок тематическое сообщество компрессора (без \texttt{ProductLine}) выдумывало <<узел-лидер \texttt{E-11}>> и перебивало реальные линейки в \texttt{global\_search}. Разделение промптов для сообществ с линейками и без них устранило шум, однако на \texttt{dev-14} (\texttt{summarize\_topic}) модель всё ещё путает модель-лидер \texttt{GS-510} с узлом-лидером. В режиме \texttt{local} на \texttt{dev-21} повтор <<\SI{2}{\text{шт.}}>> из формулировки вопроса даёт \num{1} ложное срабатывание метрики \texttt{fabricated} (\num{0.042}), поскольку \texttt{evaluation.py} сверяет числа с единицами только с результатами инструментов.
+  \item \textbf{Этап агента и инструментов (\texttt{agent.py}):} на \texttt{dev-21} агент верно определил \texttt{P-2054C}, проверил остаток (\SI{6}{\text{шт.}}) и цену (\SI{6750}{\text{руб.}}), но вместо вызова \texttt{create\_service\_order} сгенерировал текстовый ответ с расчётной суммой и <<\SI{2}{\text{шт.}}>> --- встроенный фильтр \texttt{\_find\_discrepancies} дважды перехватил неподтверждённые числа и безопасно перевёл ответ в отказ (\texttt{refused=True}). На \texttt{dev-12} при верном ответе (\texttt{P-1118B}, <<ТермоПрибор>>) модель исказила код регламента (\texttt{SP-205} вместо \texttt{SP-105}), что составило единственный реальный выдуманный факт агента (\num{1}/\num{24} = \num{0.042}).
+\end{enumerate}
+
+\begin{table}[tbp]
+  \centering
+  \caption{Эволюция качества извлечения на \num{16} эталонных документах \texttt{gold\_dev.json} и размере графа на полном корпусе.}\label{tab:extraction}
+  \footnotesize
+  \begin{tabular}{@{} l S[table-format=1.3] S[table-format=1.3] S[table-format=3.0] S[table-format=2.0] @{}}
+    \toprule
+    \textbf{Конфигурация \texttt{extraction.py}} & {\textbf{Precision}} & {\textbf{Recall}} & {\textbf{Рёбер в графе}} & {\textbf{Отброшено (\texttt{dropped})}} \\
+    \midrule
+    Лимит \texttt{max\_tokens=1024} & 1.000 & 0.329 & 50 & 12 \\
+    \texttt{max\_tokens=4096}, \num{1} пример & 1.000 & 0.590 & 125 & 38 \\
+    \textbf{\texttt{max\_tokens=4096}, \num{4} синтетических примера} & \bfseries 1.000 & \bfseries 1.000 & \bfseries 279 & \bfseries 0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ==================== 6. ГРАНИЦЫ СИСТЕМЫ ====================
+\section{Границы системы и безопасность (FR-9, FR-10)}\label{sec:safety}
+
+Контур безопасности (\cref{fig:safety}) исключает несанкционированные изменения в ERP и галлюцинации в аргументах:
+\begin{itemize}
+  \item \textbf{Подтверждение человеком (FR-9):} при \texttt{confirm=False} (по умолчанию) вызов \texttt{create\_service\_order} перехватывается до обращения к ERP и не добавляется в список выполненных шагов; агент возвращает \texttt{needs\_confirmation=True} и структуру \texttt{pending\_action} с параметрами заказа. Реальное создание заказа выполняется только при явном запуске с флагом \texttt{--confirm}.
+  \item \textbf{Заземление аргументов (FR-7, FR-10):} номер детали \texttt{part\_id} должен присутствовать в вопросе пользователя или в результатах \texttt{search\_knowledge}; количество \texttt{qty} --- в вопросе; склад проверяется по закрытому списку из \num{4} городов (Москва, Санкт-Петербург, Казань, Новосибирск). При сбоях \texttt{ErpUnavailable} выполняются до \num{3} попыток; ответы чётко различают <<нет данных>> и <<остаток \num{0}>>.
+\end{itemize}
+
+\begin{figure}[tbp]
+  \centering
+  \begin{tikzpicture}[node distance=6mm and 7mm]
+    \node[neutralbox, text width=22mm] (call) {\textbf{Вызов модели}\\(\texttt{ToolCall})};
+    \node[neutralbox, right=of call, text width=28mm] (params) {\textbf{1.~Параметры}\\Склад (\num{4} города)\\Формат \texttt{Part~ID}};
+    \node[neutralbox, right=of params, text width=29mm] (ground) {\textbf{2.~Заземление}\\\texttt{part\_id} в вопросе\\или в графе?};
+    \node[agentbox, right=of ground, text width=28mm] (optype) {\textbf{3.~Тип операции}\\Чтение ERP или\\создание заказа?};
+
+    \node[tealbox, above=7mm of optype, text width=28mm] (read) {\textbf{Чтение ERP~API}\\\texttt{/stock}, \texttt{/parts}};
+    \node[gatebox, below=9mm of optype, text width=30mm] (stop) {\textbf{\texttt{confirm=False}: STOP}\\\texttt{pending\_action} (FR-9)};
+    \node[gatebox, below=9mm of $(params)!0.5!(ground)$, text width=58mm] (rej) {\textbf{ОТКЛОНЕНИЕ:} возврат ошибки модели (FR-7)};
+
+    \draw[flowarrow] (call) -- (params);
+    \draw[flowarrow] (params) -- (ground);
+    \draw[flowarrow] (ground) -- (optype);
+    \draw[flowarrow, draw=oiTeal!85] (optype) -- (read);
+    \draw[alertarrow] (optype) -- (stop);
+    \draw[alertarrow] (params.south) -- (params.south |- rej.north);
+    \draw[alertarrow] (ground.south) -- (ground.south |- rej.north);
+  \end{tikzpicture}
+  \caption{Блок-схема барьеров безопасности и шлюза Human-in-the-Loop при выполнении вызовов инструментов.}\label{fig:safety}
+\end{figure}
+
+Ниже приведена реальная трассировка агента из \path{artifacts/eval_agent.json} (\texttt{dev-17}) и схема срабатывания шлюза подтверждения:
+\begin{Verbatim}[fontsize=\scriptsize,frame=single,rulecolor=\color{black!30},framesep=4pt]
+Вопрос: «Ошибка E-17 на AR-210. Какую деталь заказать, есть ли она в Казани и сколько стоит?»
+  1. search_knowledge({'question': 'Ошибка E-17 на AR-210'})
+     -> пусковое реле; P-1042 заменена на P-1042B (ХолодКомплект), регламент SP-104
+  2. check_stock({'part_id': 'P-1042B', 'warehouse': 'Казань'})
+     -> {'part_id': 'P-1042B', 'warehouse': 'Казань', 'qty': 3, 'discontinued': False}
+  3. get_price({'part_id': 'P-1042B'})
+     -> {'part_id': 'P-1042B', 'name': 'пусковое реле', 'price_rub': 2630, 'discontinued': False}
+Ответ: «Заменить деталь P-1042B (пусковое реле). Склад: Казань, остаток: 3 шт., цена: 2630 руб.»
+
+При запросе заказа (confirm=False):
+  [Safety Gate] create_service_order(part_id='P-2054C', warehouse='Москва', qty=2, model='BZ-120')
+  -> needs_confirmation=True, pending_action={'tool': 'create_service_order', 'args': {...}}
+\end{Verbatim}
+
+% ==================== 7. СЛЕДУЮЩИЙ ШАГ ====================
+\section{Следующий шаг развития системы}\label{sec:next}
+
+\textbf{Проверяемая гипотеза:} структурированный маршрутизатор заказов в \texttt{agent.py} в сочетании с типизацией сущностей в \texttt{MAP\_SCHEMA} для \texttt{global\_search}. Если в запросе присутствует намерение оформления заказа и все \num{4} аргумента уже подтверждены, агент подсказывает модели прямой вызов \texttt{create\_service\_order} (\texttt{dev-21}); а добавление поля \texttt{entity\_type} (\texttt{component} / \texttt{model} / \texttt{part}) в \texttt{MAP\_SCHEMA} исключает смешение модели-лидера и узла-лидера на шаге \texttt{reduce} (\texttt{dev-14}). \emph{Критерий проверки:} рост точности агента с \num{0.917} (\num{22}/\num{24}) до \num{1.000} (\num{24}/\num{24}) и снижение \texttt{fabricated\_rate} агента до \num{0.000}.
+
+% ==================== 8. ВКЛАД УЧАСТНИКОВ ====================
+\section{Вклад участников}\label{sec:contrib}
+
+Проект выполнен индивидуально: проектирование промптов и заземления (\texttt{extraction.py}, \texttt{graph\_builder.py}); кластеризация Лувена, детерминированная статистика сообществ и оба режима поиска (\texttt{communities.py}, \texttt{search.py}); ReAct-агент, типизированные инструменты ERP и шлюз подтверждения (\texttt{tools.py}, \texttt{agent.py}); \num{41} модульный тест в \texttt{tests/unit/} (\num{183} теста всего с контрактными и инфраструктурными); развёртывание локального Ollama на GPU RTX~4070~SUPER, полный бенчмаркинг \num{4} режимов, анализ ошибок и вёрстка итогового отчёта.
+
+% ==================== 9. ИСПОЛЬЗОВАНИЕ ИИ ====================
+\section{Использование ИИ-инструментов}\label{sec:ai}
+
+В процессе разработки использовались ИИ-ассистенты кодирования (Antigravity / Gemini): (1)~генерация модульных тестов граничных случаев (циклы \texttt{REPLACED\_BY}, сбои \texttt{ErpUnavailable}, перехват \texttt{confirm=False}, отказ на неизвестных кодах); (2)~диагностика усечения JSON при \texttt{max\_tokens=1024} и неполного извлечения списков руководств, рефакторинг промптов без утечки эталона; (3)~подготовка LaTeX-вёрстки отчёта с векторными схемами TikZ и графиками PGFPlots. Все архитектурные решения, код \num{6} модулей, результаты прогонов, метрики и целостность защищённой инфраструктуры проверены автором лично.
+
+\end{document}
