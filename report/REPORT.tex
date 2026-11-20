@@ -1,11 +1,10 @@
-\documentclass[a4paper,12pt]{article}
+\documentclass[a4paper,11pt]{article}
 
 \usepackage{fontspec}
 \usepackage[russian]{babel}
-\usepackage[a4paper,left=30mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage[a4paper,top=25mm,bottom=25mm,left=25mm,right=25mm]{geometry}
 \usepackage{microtype}
-\usepackage{setspace}
-\usepackage{indentfirst}
+\usepackage[skip=6pt plus 2pt]{parskip}
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{siunitx}
@@ -15,12 +14,15 @@
 \usepackage{pgfplotstable}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{needspace}
 \usepackage{caption}
 \usepackage{enumitem}
 \usepackage{fancyvrb}
-\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true,linkcolor=accentBlue,urlcolor=accentBlue,citecolor=accentBlue]{hyperref}
 \usepackage[russian,noabbrev]{cleveref}
 
+% ParaType font pairing: PT Serif (body) + PT Sans (headings/captions/tables) + PT Mono (code)
 \setmainfont{PTF55F.ttf}[
   BoldFont = PTF75F.ttf,
   ItalicFont = PTF56F.ttf,
@@ -35,22 +37,23 @@
   BoldFont = PTM75F.ttf,
   Scale = 0.86
 ]
-\emergencystretch=2em
 
-\setstretch{1.28}
-\setlength{\parindent}{1.25cm}
-\setlength{\parskip}{0pt}
+\linespread{1.18}
+\emergencystretch=1.8em
 
 \usetikzlibrary{positioning,arrows.meta,calc,fit}
 \pgfplotsset{compat=1.18}
 
-% Okabe-Ito colorblind-friendly palette
+% Restraint European analytical palette + Okabe-Ito accents for charts
+\definecolor{accentBlue}{HTML}{1E3A5F}
+\definecolor{accentSlate}{HTML}{475569}
+\definecolor{accentRule}{HTML}{CBD5E1}
 \definecolor{oiBlue}{HTML}{0072B2}
 \definecolor{oiTeal}{HTML}{009E73}
 \definecolor{oiOrange}{HTML}{D55E00}
 \definecolor{oiPurple}{HTML}{CC79A7}
 \definecolor{oiSlate}{HTML}{5C6B73}
-\definecolor{oiDark}{HTML}{1E293B}
+\definecolor{oiDark}{HTML}{0F172A}
 
 % siunitx configuration
 \sisetup{
@@ -70,43 +73,48 @@
 \crefname{section}{разд.}{разд.}
 \Crefname{section}{Разд.}{Разд.}
 
-% GOST / VKR section headings: PT Sans, centered, bold, uppercase
-\titleformat{\section}[block]
-  {\sffamily\fontsize{13}{15}\bfseries\centering}
-  {\thesection.\ }
-  {0pt}
-  {\MakeUppercase}
-\titlespacing*{\section}{0pt}{13pt plus 2pt minus 2pt}{7pt plus 1pt}
+% Modern European section headings: PT Sans Bold, left-aligned, accent color + subtle rule
+\titleformat{\section}
+  {\needspace{4\baselineskip}\sffamily\large\bfseries\color{accentBlue}}
+  {\thesection.}
+  {0.55em}
+  {}
+  [\nopagebreak\vspace{2pt}\nopagebreak{\color{accentRule}\titlerule[0.5pt]}\nopagebreak]
+\titlespacing*{\section}{0pt}{13pt plus 2pt minus 2pt}{5pt plus 1pt}
 
-% GOST / VKR captions
-% Figures: centered italic "Рис. N Название"
+% Table of contents styling (clean sans-serif)
+\renewcommand{\contentsname}{Содержание}
+\titlecontents{section}[1.6em]
+  {\sffamily\small\color{oiDark}}
+  {\contentslabel{1.6em}}
+  {\hspace*{-1.6em}}
+  {\titlerule*[0.7pc]{.}\contentspage}
+
+% Captions: PT Sans, crisp modern analytical style
 \captionsetup[figure]{
-  labelsep=space,
-  font={it,normalsize},
-  labelfont={it},
+  font={sf,small,color=accentSlate},
+  labelfont={sf,bf,color=accentBlue},
+  labelsep=period,
   justification=centering,
   skip=6pt
 }
-\addto\captionsrussian{\renewcommand{\figurename}{Рис.}}
-
-% Tables: "Таблица N" right-aligned, then centered title
-\DeclareCaptionFormat{gosttable}{\hfill#1\par\centering#3\par}
 \captionsetup[table]{
-  format=gosttable,
-  labelsep=none,
-  font={normalsize},
-  labelfont={normalfont},
-  skip=6pt
+  font={sf,small,color=accentSlate},
+  labelfont={sf,bf,color=accentBlue},
+  labelsep=period,
+  justification=raggedright,
+  singlelinecheck=false,
+  skip=5pt
 }
 
-% Compact lists with GOST indentation
-\setlist[itemize]{leftmargin=1.8cm,itemsep=2pt,topsep=4pt,parsep=0pt}
-\setlist[enumerate]{leftmargin=1.8cm,itemsep=2pt,topsep=4pt,parsep=0pt}
+% Clean lists via enumitem
+\setlist[itemize]{leftmargin=1.5em,itemsep=3pt,topsep=2pt,parsep=0pt,label={\color{accentBlue}\textbullet}}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=3pt,topsep=2pt,parsep=0pt,label={\sffamily\bfseries\color{accentBlue}\arabic*.}}
 
-% Page numbering ONLY in bottom-right corner, no rules, no headers
+% Minimal footer: ONLY plain page number in bottom-right corner, no rules, no header
 \pagestyle{fancy}
 \fancyhf{}
-\fancyfoot[R]{\normalsize\thepage}
+\fancyfoot[R]{\sffamily\small\color{accentSlate}\thepage}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
@@ -117,7 +125,7 @@
     rounded corners=2pt,
     draw=black!75,
     line width=0.6pt,
-    inner sep=5.5pt,
+    inner sep=6pt,
     align=center,
     font=\sffamily\footnotesize
   },
@@ -132,18 +140,25 @@
 
 \begin{document}
 
-% ==================== TITLE BLOCK (GOST / ITMO) ====================
-\begin{center}
-  {\sffamily\small\MakeUppercase{Университет ИТМО}}\par
-  \smallskip
-  {\sffamily\fontsize{14}{18}\bfseries Ассистент сервисной службы <<ПолярТех>>:\\
-  Graph~RAG и агент с инструментами ERP}\par
-  \smallskip
-  {\small
-    Модель LLM: \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama) \quad|\quad
-    Эмбеддинги: \texttt{bge-m3}
-  }
-\end{center}
+% ==================== MODERN TITLE BLOCK ====================
+\noindent{\sffamily\footnotesize\bfseries\color{accentSlate}\MakeUppercase{Университет ИТМО \quad$\cdot$\quad Итоговый аналитический отчёт}}\par
+\vspace{4pt}
+\noindent{\sffamily\LARGE\bfseries\color{accentBlue} Ассистент сервисной службы <<ПолярТех>>}\par
+\vspace{2pt}
+\noindent{\sffamily\large\color{accentSlate} Graph~RAG и ReAct-агент с инструментами ERP}\par
+\vspace{6pt}
+\noindent{\sffamily\footnotesize\color{accentSlate}
+  \textbf{Модель LLM:} \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama) \qquad
+  \textbf{Эмбеддинги:} \texttt{bge-m3}
+}\par
+\vspace{4pt}
+\noindent{\color{accentBlue}\rule{\linewidth}{1.2pt}}
+
+% ==================== COMPACT TABLE OF CONTENTS ====================
+\vspace{2pt}
+{\tableofcontents}
+\vspace{2pt}
+\noindent{\color{accentRule}\rule{\linewidth}{0.5pt}}
 
 % ==================== 1. ЗАДАЧА ====================
 \section{Задача}\label{sec:task}
@@ -168,7 +183,7 @@
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[node distance=6mm and 7mm, transform shape, scale=0.95]
+  \begin{tikzpicture}[node distance=6mm and 7mm, transform shape, scale=0.92]
     \node[neutralbox, text width=24mm] (disp) {\textbf{Диспетчер}\\Модель: \texttt{AR-210}\\Ошибка: \texttt{E-17}};
 
     \node[agentbox, right=of disp, text width=35mm] (agent) {%
@@ -202,7 +217,7 @@
     \draw[flowarrow] (agent.east) -- ++(5mm,0) |- (graph.west);
     \draw[alertarrow] (agent.east) -- ++(5mm,0) |- (gate.west);
   \end{tikzpicture}
-  \caption{Архитектура ассистента <<ПолярТех>>: взаимодействие ReAct-агента с графом знаний, ERP и шлюзом подтверждения человеком}\label{fig:arch}
+  \caption{Архитектура ассистента <<ПолярТех>>: взаимодействие ReAct-агента с графом знаний, ERP и шлюзом подтверждения человеком.}\label{fig:arch}
 \end{figure}
 
 % ==================== 3. РЕЗУЛЬТАТЫ ====================
@@ -212,13 +227,12 @@
 
 \begin{table}[htbp]
   \centering
-  \singlespacing
-  \caption{Сравнение четырёх режимов работы ассистента на \num{24} вопросах \texttt{questions\_dev.jsonl}}\label{tab:bench}
-  \scriptsize
-  \setlength{\tabcolsep}{4pt}
+  \caption{Сравнение четырёх режимов работы ассистента на \num{24} вопросах \texttt{questions\_dev.jsonl}. Звёздочкой отмечено ложное срабатывание метрики \texttt{fabricated} на повторе <<\SI{2}{\text{шт.}}>> из вопроса \texttt{dev-21} (\cref{sec:errors}).}\label{tab:bench}
+  \footnotesize
+  \setlength{\tabcolsep}{4.5pt}
   \begin{tabular}{@{} l S[table-format=1.3] S[table-format=1.3] S[table-format=1.3] S[table-format=1.3] @{}}
     \toprule
-    \textbf{Метрика} & {\textbf{Baseline (Flat)}} & {\textbf{Local (Graph)}} & {\textbf{Global (Graph)}} & {\textbf{Agent (Граф+ERP)}} \\
+    {\sffamily\bfseries\color{accentBlue} Метрика} & {\sffamily\bfseries\color{accentBlue} Baseline (Flat)} & {\sffamily\bfseries\color{accentBlue} Local (Graph)} & {\sffamily\bfseries\color{accentBlue} Global (Graph)} & {\sffamily\bfseries\color{accentBlue} Agent (Граф+ERP)} \\
     \midrule
     \textbf{Общая точность (Accuracy)} & 0.500 & \bfseries 0.792 & 0.417 & \bfseries 0.917 \\
     \quad Вопросы \texttt{local} (\num{5}) & 1.000 & \bfseries 1.000 & 0.800 & \bfseries 1.000 \\
@@ -244,23 +258,23 @@
       ybar=1.2pt,
       bar width=4pt,
       width=0.58\textwidth,
-      height=50mm,
+      height=48mm,
       ymin=0, ymax=1.24,
       ylabel={Доля верных ответов},
-      ylabel style={font=\scriptsize},
-      title={\textbf{Точность по типам вопросов}},
-      title style={font=\footnotesize},
+      ylabel style={font=\sffamily\scriptsize, color=accentSlate},
+      title={Точность по типам вопросов},
+      title style={font=\sffamily\footnotesize\bfseries, color=accentBlue},
       symbolic x coords={Local (5), Multihop (7), Global (4), Tool (5), Refusal (3), Все (24)},
       xtick=data,
-      xticklabel style={font=\tiny, rotate=14, anchor=east},
-      yticklabel style={font=\scriptsize},
+      xticklabel style={font=\sffamily\tiny, rotate=14, anchor=east},
+      yticklabel style={font=\sffamily\scriptsize},
       axis x line*=bottom,
       axis y line*=left,
       ymajorgrids=true,
       grid style={dashed, black!20},
       axis on top=false,
       enlarge x limits=0.11,
-      legend style={at={(0.5,0.99)}, anchor=north, legend columns=4, font=\tiny, draw=black!20, fill=white}
+      legend style={at={(0.5,0.99)}, anchor=north, legend columns=4, font=\sffamily\tiny, draw=black!20, fill=white}
     ]
       \addplot[fill=oiSlate!85, draw=none] table[x=category, y=baseline, col sep=comma]{report/benchmark_accuracy.csv};
       \addplot[fill=oiTeal!85, draw=none] table[x=category, y=local, col sep=comma]{report/benchmark_accuracy.csv};
@@ -274,17 +288,17 @@
       anchor=south west,
       ybar,
       bar width=12pt,
-      width=0.38\textwidth,
-      height=50mm,
+      width=0.37\textwidth,
+      height=48mm,
       ymin=0, ymax=6200,
       ylabel={Токенов на вопрос},
-      ylabel style={font=\scriptsize},
-      title={\textbf{Стоимость режимов}},
-      title style={font=\footnotesize},
+      ylabel style={font=\sffamily\scriptsize, color=accentSlate},
+      title={Стоимость режимов},
+      title style={font=\sffamily\footnotesize\bfseries, color=accentBlue},
       symbolic x coords={Local, Flat RAG, Global, Agent},
       xtick=data,
-      xticklabel style={font=\tiny},
-      yticklabel style={font=\scriptsize},
+      xticklabel style={font=\sffamily\tiny},
+      yticklabel style={font=\sffamily\scriptsize},
       axis x line*=bottom,
       axis y line*=left,
       ymajorgrids=true,
@@ -292,20 +306,18 @@
       axis on top=false,
       enlarge x limits=0.22,
       nodes near coords,
-      nodes near coords style={font=\tiny\bfseries, color=oiDark},
+      nodes near coords style={font=\sffamily\tiny\bfseries, color=oiDark},
       every node near coord/.append style={/pgf/number format/fixed, /pgf/number format/precision=0}
     ]
       \addplot[fill=oiBlue!75, draw=none] table[x=mode, y=tokens, col sep=comma]{report/benchmark_tokens.csv};
     \end{axis}
   \end{tikzpicture}
-  \caption{Точность четырёх режимов по категориям вопросов и удельная стоимость в токенах на вопрос}\label{fig:bench}
+  \caption{Точность четырёх режимов по категориям вопросов (слева) и удельная стоимость в токенах на вопрос (справа).}\label{fig:bench}
 \end{figure}
 
-Звёздочкой в \cref{tab:bench} отмечено единственное ложное срабатывание метрики \texttt{fabricated} в режиме \texttt{local} на повторе <<\SI{2}{\text{шт.}}>> из формулировки вопроса \texttt{dev-21} (\cref{sec:errors}).
+\textbf{Качество извлечения (\path{eval_extraction.json}, \num{16} эталонных документов \path{gold_dev.json}):} связи --- Precision~\num{1.000}, Recall~\num{1.000} (\num{161} из \num{161}); сущности --- Precision~\num{1.000}, Recall~\num{1.000} (\num{165} из \num{165}); отброшено проверками заземления (\texttt{dropped}): \num{0}.
 
-Качество извлечения на \num{16} эталонных документах \path{gold_dev.json} (\path{eval_extraction.json}): связи --- Precision~\num{1.000}, Recall~\num{1.000} (\num{161} из \num{161}); сущности --- Precision~\num{1.000}, Recall~\num{1.000} (\num{165} из \num{165}); отброшено проверками заземления (\texttt{dropped}): \num{0}.
-
-Стоимость индексации (\path{index_stats.json}): \num{80} документов (\num{92} чанка), \num{118} узлов, \num{279} рёбер, \num{8} сообществ, \num{0} отброшенных элементов, \num{0} конфликтов. Затраты LLM: \num{100} вызовов (\num{20} попаданий в кеш), \num{228614} prompt-токенов и \num{40812} completion-токенов. Повторный прогон всех \num{5} оценок по закоммиченному кешу полностью воспроизводит числа \cref{tab:bench}.
+\textbf{Стоимость индексации (\path{index_stats.json}):} \num{80} документов (\num{92} чанка), \num{118} узлов, \num{279} рёбер, \num{8} сообществ, \num{0} отброшенных элементов, \num{0} конфликтов. Затраты LLM: \num{100} вызовов (\num{20} попаданий в кеш), \num{228614} prompt-токенов и \num{40812} completion-токенов. Повторный прогон всех \num{5} оценок по закоммиченному кешу полностью воспроизводит числа \cref{tab:bench}.
 
 % ==================== 4. ГДЕ ГРАФ ПОМОГАЕТ И ГДЕ УСТУПАЕТ ====================
 \section{Где граф помогает и где уступает}\label{sec:compare}
@@ -334,7 +346,7 @@
     \draw[flowarrow] (pnew) -- node[edgelabel]{SUPPLIED\_BY} (supp);
     \draw[flowarrow] (err) -- node[edgelabel]{FIXED\_BY} (proc);
   \end{tikzpicture}
-  \caption{Фрагмент графа знаний вокруг \texttt{AR-210}: путь длиной \num{3} ребра и разворачивание цепочки \texttt{REPLACED\_BY}}\label{fig:subgraph}
+  \caption{Фрагмент графа знаний вокруг \texttt{AR-210}: путь длиной \num{3} ребра между \texttt{AR-210} и \texttt{E-17} и разворачивание цепочки \texttt{REPLACED\_BY}.}\label{fig:subgraph}
 \end{figure}
 
 % ==================== 5. АНАЛИЗ ОШИБОК ====================
@@ -349,13 +361,12 @@
 
 \begin{table}[htbp]
   \centering
-  \singlespacing
-  \caption{Эволюция качества извлечения на \num{16} эталонных документах \texttt{gold\_dev.json} и размере графа}\label{tab:extraction}
-  \scriptsize
-  \setlength{\tabcolsep}{4.5pt}
+  \caption{Эволюция качества извлечения на \num{16} эталонных документах \texttt{gold\_dev.json} и размере графа.}\label{tab:extraction}
+  \footnotesize
+  \setlength{\tabcolsep}{5pt}
   \begin{tabular}{@{} l S[table-format=1.3] S[table-format=1.3] S[table-format=3.0] S[table-format=2.0] @{}}
     \toprule
-    \textbf{Конфигурация \texttt{extraction.py}} & {\textbf{Precision}} & {\textbf{Recall}} & {\textbf{Рёбер в графе}} & {\textbf{Отброшено (\texttt{dropped})}} \\
+    {\sffamily\bfseries\color{accentBlue} Конфигурация \texttt{extraction.py}} & {\sffamily\bfseries\color{accentBlue} Precision} & {\sffamily\bfseries\color{accentBlue} Recall} & {\sffamily\bfseries\color{accentBlue} Рёбер в графе} & {\sffamily\bfseries\color{accentBlue} Отброшено (\texttt{dropped})} \\
     \midrule
     Лимит \texttt{max\_tokens=1024} & 1.000 & 0.329 & 50 & 12 \\
     \texttt{max\_tokens=4096}, \num{1} пример & 1.000 & 0.590 & 125 & 38 \\
@@ -375,7 +386,7 @@
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[node distance=6mm and 6mm, transform shape, scale=0.92]
+  \begin{tikzpicture}[node distance=6mm and 6mm, transform shape, scale=0.9]
     \node[neutralbox, text width=23mm] (call) {\textbf{Вызов модели}\\(\texttt{ToolCall})};
     \node[neutralbox, right=of call, text width=28mm] (params) {\textbf{1.~Параметры}\\Склад (\num{4} города)\\Формат \texttt{Part~ID}};
     \node[neutralbox, right=of params, text width=29mm] (ground) {\textbf{2.~Заземление}\\\texttt{part\_id} в вопросе\\или в графе?};
@@ -393,12 +404,11 @@
     \draw[alertarrow] (params.south) -- (params.south |- rej.north);
     \draw[alertarrow] (ground.south) -- (ground.south |- rej.north);
   \end{tikzpicture}
-  \caption{Блок-схема барьеров безопасности и шлюза Human-in-the-Loop}\label{fig:safety}
+  \caption{Блок-схема барьеров безопасности и шлюза Human-in-the-Loop при выполнении вызовов инструментов.}\label{fig:safety}
 \end{figure}
 
 Ниже приведена реальная трассировка агента из \path{artifacts/eval_agent.json} (\texttt{dev-17}) и схема срабатывания шлюза подтверждения:
-\begin{singlespace}
-\begin{Verbatim}[fontsize=\scriptsize,frame=single,rulecolor=\color{black!30},framesep=4pt,samepage=true]
+\begin{Verbatim}[fontsize=\scriptsize,frame=single,rulecolor=\color{accentRule},framesep=5pt,samepage=true]
 Вопрос: «Ошибка E-17 на AR-210. Какую деталь заказать, есть ли она в Казани и сколько стоит?»
   1. search_knowledge({'question': 'Ошибка E-17 на AR-210'})
      -> пусковое реле; P-1042 заменена на P-1042B (ХолодКомплект), регламент SP-104
@@ -412,7 +422,6 @@
   [Safety Gate] create_service_order(part_id='P-2054C', warehouse='Москва', qty=2, model='BZ-120')
   -> needs_confirmation=True, pending_action={'tool': 'create_service_order', 'args': {...}}
 \end{Verbatim}
-\end{singlespace}
 
 % ==================== 7. СЛЕДУЮЩИЙ ШАГ ====================
 \section{Следующий шаг развития системы}\label{sec:next}
