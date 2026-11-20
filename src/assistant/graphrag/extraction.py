@@ -97,6 +97,8 @@ SYSTEM_PROMPT = """Ты анализируешь фрагменты технич
      "object_type": "Part", "object": "P-9001B"},
     {"subject_type": "Part", "subject": "P-9001", "type": "IS_A",
      "object_type": "Component", "object": "пусковое реле"},
+    {"subject_type": "Part", "subject": "P-9001B", "type": "IS_A",
+     "object_type": "Component", "object": "пусковое реле"},
     {"subject_type": "Part", "subject": "P-9001B", "type": "SUPPLIED_BY",
      "object_type": "Supplier", "object": "ХолодКомплект"}
   ]
@@ -171,6 +173,17 @@ def _parse_extraction_payload(raw_content: str) -> dict | None:
     return data
 
 
+def _name_in_text(canon: str, text_lower: str) -> bool:
+    """Проверяет упоминание словарного названия в тексте с учётом русских окончаний."""
+    low = canon.lower()
+    if low in text_lower:
+        return True
+    words = [w for w in low.split() if len(w) >= 3]
+    if not words:
+        return False
+    return all((w[: max(4, len(w) - 2)] if len(w) >= 5 else w) in text_lower for w in words)
+
+
 def extract_chunk(chunk: Chunk, llm: LLMClient) -> ExtractionResult:
     """Возвращает сущности и связи чанка строго по схеме графа.
 
@@ -186,8 +199,19 @@ def extract_chunk(chunk: Chunk, llm: LLMClient) -> ExtractionResult:
     ]
 
     data = None
-    for _ in range(2):
-        response = llm.chat(messages, json_schema=EXTRACTION_SCHEMA, max_tokens=4096)
+    for attempt in range(2):
+        call_messages = (
+            messages
+            if attempt == 0
+            else [
+                *messages,
+                {
+                    "role": "user",
+                    "content": "Предыдущий ответ содержал некорректный JSON. Верни валидный JSON строго по схеме.",
+                },
+            ]
+        )
+        response = llm.chat(call_messages, json_schema=EXTRACTION_SCHEMA, max_tokens=4096)
         data = _parse_extraction_payload(response.content)
         if data is not None:
             break
@@ -197,6 +221,7 @@ def extract_chunk(chunk: Chunk, llm: LLMClient) -> ExtractionResult:
 
     vocab = vocabulary()
     chunk_codes = set(find_codes(chunk.text))
+    chunk_text_lower = chunk.text.lower()
 
     valid_entities: dict[str, Entity] = {}
     dropped = 0
@@ -207,7 +232,10 @@ def extract_chunk(chunk: Chunk, llm: LLMClient) -> ExtractionResult:
         canon = canonical_name(entity_type, raw_name, vocab)
         if not canon:
             return None
-        if entity_type in CODE_TYPES and canon not in chunk_codes:
+        if entity_type in CODE_TYPES:
+            if canon not in chunk_codes:
+                return None
+        elif not _name_in_text(canon, chunk_text_lower):
             return None
         return Entity(type=entity_type, name=canon)
 

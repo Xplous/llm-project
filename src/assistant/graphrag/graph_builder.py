@@ -81,5 +81,17 @@ def build_graph(results: list[ExtractionResult]) -> nx.DiGraph:
                     graph.remove_edge(u, v)
                     graph.remove_edge(v, u)
 
+    # Разрываем циклы REPLACED_BY длины >= 3 (удаляя ребро с наименьшим весом)
+    while True:
+        repl_edges = [(u, v) for u, v, d in graph.edges(data=True) if d.get("type") == "REPLACED_BY"]
+        repl_sub = nx.DiGraph(repl_edges)
+        try:
+            cycle = nx.find_cycle(repl_sub)
+        except nx.NetworkXNoCycle:
+            break
+        weakest = min(cycle, key=lambda edge: (graph.edges[edge[0], edge[1]]["weight"], edge[0], edge[1]))
+        graph.remove_edge(weakest[0], weakest[1])
+        conflicts += 1
+
     graph.graph["conflicts"] = conflicts
     return graph

@@ -51,8 +51,12 @@ def _replacement_chain(part_node: str, graph: nx.DiGraph) -> list[str]:
     return chain
 
 
-def _compute_line_stats(community_nodes: set[str], graph: nx.DiGraph) -> list[str]:
-    """Считает детерминированную статистику отказов и снятых деталей по связанным линейкам и моделям."""
+def _compute_line_stats(community_nodes: set[str], graph: nx.DiGraph) -> tuple[list[str], list[str]]:
+    """Считает детерминированную статистику отказов и снятых деталей по связанным линейкам и моделям.
+
+    Возвращает кортеж `(full_lines, compact_lines)`: подробные строки для промпта и компактную
+    сводку для детерминированного включения в итог.
+    """
     model_to_line: dict[str, str] = {}
     for u, v, data in graph.edges(data=True):
         if data.get("type") == "BELONGS_TO":
@@ -68,6 +72,7 @@ def _compute_line_stats(community_nodes: set[str], graph: nx.DiGraph) -> list[st
             relevant_lines.add(model_to_line[node])
 
     stats_lines: list[str] = []
+    compact_lines: list[str] = []
     for line_name in sorted(relevant_lines):
         models_in_line = sorted(m for m, pl in model_to_line.items() if pl == line_name)
         if not models_in_line:
@@ -97,25 +102,34 @@ def _compute_line_stats(community_nodes: set[str], graph: nx.DiGraph) -> list[st
 
         models_names = ", ".join(graph.nodes[m].get("name", m) for m in models_in_line)
         stats_lines.append(f"Линейка «{line_name}» (модели: {models_names}):")
+        compact_parts = [f"Линейка «{line_name}» ({models_names}):"]
         if comp_failures:
             ranked_comps = comp_failures.most_common()
             top_comp, top_cnt = ranked_comps[0]
             comp_str = ", ".join(f"{name} ({cnt})" for name, cnt in ranked_comps)
             stats_lines.append(f"  Чаще всего отказывает узел: {top_comp} ({top_cnt}); все отказы узлов: {comp_str}.")
+            compact_parts.append(f"чаще всего отказывает {top_comp} ({top_cnt});")
         if model_failures:
             ranked_mods = model_failures.most_common()
             top_mod, top_mcnt = ranked_mods[0]
             mod_str = ", ".join(f"{name} ({cnt})" for name, cnt in ranked_mods)
             mod_line = f"  Больше всего отказов у модели: {top_mod} ({top_mcnt}); отказы по моделям: {mod_str}."
             stats_lines.append(mod_line)
+            compact_parts.append(f"лидер отказов среди моделей — {top_mod} ({top_mcnt});")
         if disc_models:
             parts_desc = [
                 f"{p} (модели {', '.join(sorted(disc_models[p]))}; замена: {' -> '.join(disc_chains[p])})"
                 for p in sorted(disc_models)
             ]
             stats_lines.append(f"  Снятые с производства детали линейки: {'; '.join(parts_desc)}.")
+            short_disc = [
+                f"{' -> '.join(disc_chains[p])} ({', '.join(sorted(disc_models[p]))})"
+                for p in sorted(disc_models)
+            ]
+            compact_parts.append(f"сняты детали: {'; '.join(short_disc)}.")
+        compact_lines.append(" ".join(compact_parts))
 
-    return stats_lines
+    return stats_lines, compact_lines
 
 
 def summarize_community(community: Community, graph: nx.DiGraph, llm: LLMClient) -> str:
@@ -131,7 +145,17 @@ def summarize_community(community: Community, graph: nx.DiGraph, llm: LLMClient)
         if n in graph
     ]
 
-    incident_edges: list[tuple[int, str]] = []
+    rel_priority = {
+        "FAILED": 0,
+        "REPLACED_BY": 1,
+        "FIXED_BY": 2,
+        "INDICATES": 3,
+        "SUPPLIED_BY": 4,
+        "BELONGS_TO": 5,
+        "IS_A": 6,
+        "HAS_PART": 7,
+    }
+    incident_edges: list[tuple[int, int, str]] = []
     for u, v, data in graph.edges(data=True):
         if u in community_nodes or v in community_nodes:
             rel_type = data.get("type", "")
@@ -139,11 +163,11 @@ def summarize_community(community: Community, graph: nx.DiGraph, llm: LLMClient)
             u_name = graph.nodes[u].get("name", u)
             v_name = graph.nodes[v].get("name", v)
             desc = f"{u_name} -[{rel_type}]-> {v_name} (вес: {weight})"
-            incident_edges.append((weight, desc))
+            incident_edges.append((rel_priority.get(rel_type, 9), -weight, desc))
 
-    incident_edges.sort(key=lambda item: (-item[0], item[1]))
-    edge_lines = [desc for _, desc in incident_edges[:50]]
-    stats_lines = _compute_line_stats(community_nodes, graph)
+    incident_edges.sort(key=lambda item: (item[0], item[1], item[2]))
+    edge_lines = [desc for _, _, desc in incident_edges[:80]]
+    stats_lines, compact_lines = _compute_line_stats(community_nodes, graph)
 
     sections = [f"Узлы сообщества ({len(node_labels)}): {', '.join(node_labels)}."]
     if stats_lines:
@@ -155,22 +179,30 @@ def summarize_community(community: Community, graph: nx.DiGraph, llm: LLMClient)
 
     facts_text = "\n\n".join(sections)
 
+    compact_prefix = " ".join(compact_lines).strip()
+    prefix_words = compact_prefix.split()
+    if len(prefix_words) > 110:
+        prefix_words = prefix_words[:110]
+        compact_prefix = " ".join(prefix_words)
+
+    remaining_budget = max(25, 135 - len(prefix_words))
+
     if stats_lines:
         extra_rules = (
-            "- Обязательно включи в сводку все данные из блока «Готовые подсчёты по линейкам и моделям»: "
-            "название линейки, узел-лидер по отказам (с числом), модель-лидер по отказам (с числом) "
-            "и все снятые с производства детали линейки (с их заменами).\n"
-            "- Не трать объём сводки на перечисление всех штатных деталей моделей.\n"
+            f"- Блок точной статистики по линейкам уже будет добавлен автоматически в начало сводки; "
+            f"дополни его кратким обзором (строго до {remaining_budget} слов): "
+            "какие коды ошибок, регламенты, поставщики и ключевые узлы входят в сообщество.\n"
+            "- Не перечисляй все штатные детали моделей и не пересчитывай статистику заново.\n"
         )
     else:
         extra_rules = (
             "- Это тематическое сообщество без линейки оборудования: опиши узлы, коды ошибок, "
-            "регламенты, поставщиков и замены деталей.\n"
+            "регламенты, поставщиков и замены деталей (строго до 130 слов).\n"
             "- НЕ указывай «линейку», «узел-лидер по отказам» и «модель-лидер по отказам».\n"
         )
 
     prompt = (
-        "Составь краткую сводку сообщества графа знаний (строго до 130 слов).\n"
+        "Составь краткую сводку сообщества графа знаний.\n"
         "Опиши: какие сущности входят в сообщество, как они связаны, что встречается чаще всего.\n"
         "ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА:\n"
         "- Используй ТОЛЬКО приведённые ниже факты, коды, названия и числа; не выдумывай проценты.\n"
@@ -186,8 +218,10 @@ def summarize_community(community: Community, graph: nx.DiGraph, llm: LLMClient)
         {"role": "user", "content": prompt},
     ]
 
-    response = llm.chat(messages, max_tokens=400)
-    words = response.content.strip().split()
+    response = llm.chat(messages, max_tokens=350)
+    llm_text = response.content.strip()
+    combined = f"{compact_prefix} {llm_text}".strip() if compact_prefix else llm_text
+    words = combined.split()
     if len(words) > 150:
         return " ".join(words[:150])
-    return response.content.strip()
+    return combined
