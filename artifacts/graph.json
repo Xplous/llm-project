@@ -1572,6 +1572,15 @@
     },
     {
       "source": "Part:P-1046B",
+      "target": "Component:вентилятор испарителя",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-01.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-1046B",
       "target": "Supplier:ВентПром",
       "type": "SUPPLIED_BY",
       "weight": 1,
@@ -1607,6 +1616,15 @@
       "sources": [
         "manual_AR-310.md#0",
         "manual_AR-320.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-1118B",
+      "target": "Component:датчик температуры",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-02.md#0"
       ]
     },
     {
@@ -1650,6 +1668,15 @@
     },
     {
       "source": "Part:P-1042B",
+      "target": "Component:пусковое реле",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-03.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-1042B",
       "target": "Supplier:ХолодКомплект",
       "type": "SUPPLIED_BY",
       "weight": 1,
@@ -1689,6 +1716,16 @@
     },
     {
       "source": "Part:P-2054B",
+      "target": "Component:нагреватель оттайки",
+      "type": "IS_A",
+      "weight": 2,
+      "sources": [
+        "bulletin_SB-2025-04.md#0",
+        "bulletin_SB-2025-08.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-2054B",
       "target": "Supplier:ТермоПрибор",
       "type": "SUPPLIED_BY",
       "weight": 1,
@@ -1700,15 +1737,6 @@
       "source": "Part:P-2054B",
       "target": "Part:P-2054C",
       "type": "REPLACED_BY",
-      "weight": 1,
-      "sources": [
-        "bulletin_SB-2025-08.md#0"
-      ]
-    },
-    {
-      "source": "Part:P-2054B",
-      "target": "Component:нагреватель оттайки",
-      "type": "IS_A",
       "weight": 1,
       "sources": [
         "bulletin_SB-2025-08.md#0"
@@ -1742,6 +1770,15 @@
       "sources": [
         "manual_BZ-210.md#0",
         "manual_BZ-220.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-2110B",
+      "target": "Component:компрессор",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-05.md#0"
       ]
     },
     {
@@ -1785,6 +1822,16 @@
     },
     {
       "source": "Part:P-3062B",
+      "target": "Component:циркуляционный насос",
+      "type": "IS_A",
+      "weight": 2,
+      "sources": [
+        "bulletin_SB-2025-06.md#0",
+        "bulletin_SB-2025-09.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-3062B",
       "target": "Supplier:ГидроТех",
       "type": "SUPPLIED_BY",
       "weight": 1,
@@ -1796,15 +1843,6 @@
       "source": "Part:P-3062B",
       "target": "Part:P-3062C",
       "type": "REPLACED_BY",
-      "weight": 1,
-      "sources": [
-        "bulletin_SB-2025-09.md#0"
-      ]
-    },
-    {
-      "source": "Part:P-3062B",
-      "target": "Component:циркуляционный насос",
-      "type": "IS_A",
       "weight": 1,
       "sources": [
         "bulletin_SB-2025-09.md#0"
@@ -1842,6 +1880,15 @@
     },
     {
       "source": "Part:P-3126B",
+      "target": "Component:реле давления",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-07.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-3126B",
       "target": "Supplier:АвтоматикаСевер",
       "type": "SUPPLIED_BY",
       "weight": 1,
@@ -1851,11 +1898,29 @@
     },
     {
       "source": "Part:P-2054C",
+      "target": "Component:нагреватель оттайки",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-08.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-2054C",
       "target": "Supplier:ТермоПрибор",
       "type": "SUPPLIED_BY",
       "weight": 1,
       "sources": [
         "bulletin_SB-2025-08.md#0"
+      ]
+    },
+    {
+      "source": "Part:P-3062C",
+      "target": "Component:циркуляционный насос",
+      "type": "IS_A",
+      "weight": 1,
+      "sources": [
+        "bulletin_SB-2025-09.md#0"
       ]
     },
     {
