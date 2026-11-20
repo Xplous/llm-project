@@ -1,9 +1,11 @@
-\documentclass[a4paper,10pt]{article}
+\documentclass[a4paper,12pt]{article}
 
 \usepackage{fontspec}
 \usepackage[russian]{babel}
-\usepackage[a4paper,left=19mm,right=19mm,top=19mm,bottom=19mm]{geometry}
+\usepackage[a4paper,left=30mm,right=15mm,top=20mm,bottom=20mm]{geometry}
 \usepackage{microtype}
+\usepackage{setspace}
+\usepackage{indentfirst}
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{siunitx}
@@ -13,15 +15,31 @@
 \usepackage{pgfplotstable}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage{caption}
 \usepackage{enumitem}
 \usepackage{fancyvrb}
-\usepackage[hidelinks,colorlinks=true,linkcolor=oiBlue,urlcolor=oiBlue,citecolor=oiBlue]{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage[russian,noabbrev]{cleveref}
 
-\setmainfont{Times New Roman}
-\setsansfont{Arial}
-\setmonofont[Scale=0.86]{Consolas}
-\emergencystretch=1.5em
+\setmainfont{PTF55F.ttf}[
+  BoldFont = PTF75F.ttf,
+  ItalicFont = PTF56F.ttf,
+  BoldItalicFont = PTF76F.ttf
+]
+\setsansfont{PTS55F.ttf}[
+  BoldFont = PTS75F.ttf,
+  ItalicFont = PTS56F.ttf,
+  BoldItalicFont = PTS76F.ttf
+]
+\setmonofont{PTM55F.ttf}[
+  BoldFont = PTM75F.ttf,
+  Scale = 0.86
+]
+\emergencystretch=2em
+
+\setstretch{1.28}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
 
 \usetikzlibrary{positioning,arrows.meta,calc,fit}
 \pgfplotsset{compat=1.18}
@@ -52,26 +70,45 @@
 \crefname{section}{разд.}{разд.}
 \Crefname{section}{Разд.}{Разд.}
 
-% Section typography (NeurIPS / IEEE inspired clean hierarchy)
-\titleformat{\section}{\large\bfseries\color{oiDark}}{\thesection.}{0.5em}{}
-\titlespacing*{\section}{0pt}{10pt plus 2pt minus 1pt}{4pt plus 1pt}
-\titleformat{\subsection}{\normalsize\bfseries\color{oiDark}}{\thesubsection}{0.5em}{}
-\titlespacing*{\subsection}{0pt}{6pt plus 1pt minus 1pt}{2pt}
+% GOST / VKR section headings: PT Sans, centered, bold, uppercase
+\titleformat{\section}[block]
+  {\sffamily\fontsize{13}{15}\bfseries\centering}
+  {\thesection.\ }
+  {0pt}
+  {\MakeUppercase}
+\titlespacing*{\section}{0pt}{13pt plus 2pt minus 2pt}{7pt plus 1pt}
 
-% Compact lists
-\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt,parsep=0pt}
-\setlist[enumerate]{leftmargin=1.5em,itemsep=2pt,topsep=3pt,parsep=0pt}
+% GOST / VKR captions
+% Figures: centered italic "Рис. N Название"
+\captionsetup[figure]{
+  labelsep=space,
+  font={it,normalsize},
+  labelfont={it},
+  justification=centering,
+  skip=6pt
+}
+\addto\captionsrussian{\renewcommand{\figurename}{Рис.}}
 
-% Header & Footer
+% Tables: "Таблица N" right-aligned, then centered title
+\DeclareCaptionFormat{gosttable}{\hfill#1\par\centering#3\par}
+\captionsetup[table]{
+  format=gosttable,
+  labelsep=none,
+  font={normalsize},
+  labelfont={normalfont},
+  skip=6pt
+}
+
+% Compact lists with GOST indentation
+\setlist[itemize]{leftmargin=1.8cm,itemsep=2pt,topsep=4pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=1.8cm,itemsep=2pt,topsep=4pt,parsep=0pt}
+
+% Page numbering ONLY in bottom-right corner, no rules, no headers
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\footnotesize\color{oiSlate} <<ПолярТех>> --- Ассистент сервисной службы (ITMO LLM Project)}
-\fancyhead[R]{\footnotesize\color{oiSlate} Версия \texttt{v1.0}}
-\fancyfoot[L]{\footnotesize\color{oiSlate} Репозиторий: \url{https://github.com/Xplous/llm-project}}
-\fancyfoot[R]{\footnotesize\color{oiSlate} Стр.~\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\footrulewidth}{0.4pt}
-\setlength{\headheight}{13pt}
+\fancyfoot[R]{\normalsize\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
 
 % Unified TikZ styles
 \tikzset{
@@ -80,9 +117,9 @@
     rounded corners=2pt,
     draw=black!75,
     line width=0.6pt,
-    inner sep=6pt,
+    inner sep=5.5pt,
     align=center,
-    font=\scriptsize
+    font=\sffamily\footnotesize
   },
   agentbox/.style={sysbox, fill=blue!5, draw=oiBlue!80, line width=0.8pt},
   neutralbox/.style={sysbox, fill=gray!8},
@@ -95,19 +132,18 @@
 
 \begin{document}
 
-% ==================== TITLE BLOCK ====================
+% ==================== TITLE BLOCK (GOST / ITMO) ====================
 \begin{center}
-  {\Large\bfseries\color{oiDark} Ассистент сервисной службы <<ПолярТех>>:\\
+  {\sffamily\small\MakeUppercase{Университет ИТМО}}\par
+  \smallskip
+  {\sffamily\fontsize{14}{18}\bfseries Ассистент сервисной службы <<ПолярТех>>:\\
   Graph~RAG и агент с инструментами ERP}\par
-  \medskip
-  {\footnotesize\color{oiSlate}
-    Репозиторий: \url{https://github.com/Xplous/llm-project} \quad|\quad
-    Модель LLM: \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama, RTX~4070~SUPER)\par
-    Эмбеддинги: \texttt{bge-m3} \quad|\quad
-    Метка версии: \texttt{v1.0}
+  \smallskip
+  {\small
+    Модель LLM: \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama) \quad|\quad
+    Эмбеддинги: \texttt{bge-m3}
   }
 \end{center}
-\noindent\rule{\linewidth}{0.8pt}
 
 % ==================== 1. ЗАДАЧА ====================
 \section{Задача}\label{sec:task}
@@ -130,12 +166,12 @@
   \item \textbf{Инструменты и ReAct-агент (FR-6--FR-10):} модуль \texttt{tools.py} предоставляет \num{5} типизированных инструментов с валидацией аргументов (\num{4} склада ERP, формат кода детали). Модуль \texttt{agent.py} ведёт ReAct-цикл (\texttt{max\_steps=6}), нормализует коды, проверяет заземление деталей и чисел, выполняет до \num{3} попыток при \texttt{ErpUnavailable} и перехватывает \texttt{create\_service\_order} при \texttt{confirm=False} в \texttt{pending\_action}.
 \end{itemize}
 
-\begin{figure}[bp]
+\begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[node distance=8mm and 10mm]
+  \begin{tikzpicture}[node distance=6mm and 7mm, transform shape, scale=0.95]
     \node[neutralbox, text width=24mm] (disp) {\textbf{Диспетчер}\\Модель: \texttt{AR-210}\\Ошибка: \texttt{E-17}};
 
-    \node[agentbox, right=of disp, text width=34mm] (agent) {%
+    \node[agentbox, right=of disp, text width=35mm] (agent) {%
       \textbf{ReAct-агент}\\
       Thought--Action цикл\\
       Лимит \texttt{max\_steps=6}\\
@@ -143,19 +179,19 @@
       Дедупликация шагов
     };
 
-    \node[neutralbox, right=14mm of agent, text width=54mm] (erp) {%
+    \node[neutralbox, right=11mm of agent, text width=56mm] (erp) {%
       \textbf{Учётная система (ERP)}\\
       \texttt{check\_stock} (\num{4} склада), \texttt{get\_price}\\
       До \num{3} попыток при \texttt{ErpUnavailable}
     };
 
-    \node[tealbox, above=5mm of erp, text width=54mm] (graph) {%
+    \node[tealbox, above=5mm of erp, text width=56mm] (graph) {%
       \textbf{Граф знаний (Graph~RAG)}\\
       \num{118} узлов, \num{279} рёбер, \num{8} сообществ\\
       \texttt{local\_search} (пути $\le 3$ + \texttt{REPLACED\_BY}) / Map-Reduce
     };
 
-    \node[gatebox, below=5mm of erp, text width=54mm] (gate) {%
+    \node[gatebox, below=5mm of erp, text width=56mm] (gate) {%
       \textbf{Шлюз безопасности (FR-9, FR-10)}\\
       \texttt{confirm=False}: перехват \texttt{create\_service\_order}\\
       Возврат \texttt{pending\_action} диспетчеру
@@ -163,10 +199,10 @@
 
     \draw[flowarrow] (disp.east) -- (agent.west);
     \draw[flowarrow] (agent.east) -- (erp.west);
-    \draw[flowarrow] (agent.east) -- ++(6mm,0) |- (graph.west);
-    \draw[alertarrow] (agent.east) -- ++(6mm,0) |- (gate.west);
+    \draw[flowarrow] (agent.east) -- ++(5mm,0) |- (graph.west);
+    \draw[alertarrow] (agent.east) -- ++(5mm,0) |- (gate.west);
   \end{tikzpicture}
-  \caption{Архитектура ассистента <<ПолярТех>>: взаимодействие ReAct-агента с графом знаний, ERP и шлюзом подтверждения человеком.}\label{fig:arch}
+  \caption{Архитектура ассистента <<ПолярТех>>: взаимодействие ReAct-агента с графом знаний, ERP и шлюзом подтверждения человеком}\label{fig:arch}
 \end{figure}
 
 % ==================== 3. РЕЗУЛЬТАТЫ ====================
@@ -174,10 +210,12 @@
 
 Оценка выполнена на \num{24} контрольных вопросах \path{questions_dev.jsonl} (\texttt{temperature=0}, \texttt{seed=7}, чистый кеш \path{artifacts/llm_cache/}, модель \texttt{qwen3:4b-instruct-2507-q4\_K\_M}). Итоговые показатели четырёх режимов приведены в \cref{tab:bench} и визуализированы на \cref{fig:bench}.
 
-\begin{table}[tbp]
+\begin{table}[htbp]
   \centering
-  \caption{Сравнение четырёх режимов работы ассистента на \num{24} вопросах \texttt{questions\_dev.jsonl}. Звёздочкой отмечено ложное срабатывание метрики \texttt{fabricated} на повторе <<\SI{2}{\text{шт.}}>> из вопроса \texttt{dev-21} (\cref{sec:errors}).}\label{tab:bench}
-  \footnotesize
+  \singlespacing
+  \caption{Сравнение четырёх режимов работы ассистента на \num{24} вопросах \texttt{questions\_dev.jsonl}}\label{tab:bench}
+  \scriptsize
+  \setlength{\tabcolsep}{4pt}
   \begin{tabular}{@{} l S[table-format=1.3] S[table-format=1.3] S[table-format=1.3] S[table-format=1.3] @{}}
     \toprule
     \textbf{Метрика} & {\textbf{Baseline (Flat)}} & {\textbf{Local (Graph)}} & {\textbf{Global (Graph)}} & {\textbf{Agent (Граф+ERP)}} \\
@@ -198,23 +236,23 @@
   \end{tabular}
 \end{table}
 
-\begin{figure}[tbp]
+\begin{figure}[htbp]
   \centering
   \begin{tikzpicture}
     \begin{axis}[
       name=accplot,
       ybar=1.2pt,
-      bar width=4.2pt,
+      bar width=4pt,
       width=0.58\textwidth,
-      height=48mm,
-      ymin=0, ymax=1.22,
+      height=50mm,
+      ymin=0, ymax=1.24,
       ylabel={Доля верных ответов},
       ylabel style={font=\scriptsize},
       title={\textbf{Точность по типам вопросов}},
       title style={font=\footnotesize},
       symbolic x coords={Local (5), Multihop (7), Global (4), Tool (5), Refusal (3), Все (24)},
       xtick=data,
-      xticklabel style={font=\tiny, rotate=12, anchor=east},
+      xticklabel style={font=\tiny, rotate=14, anchor=east},
       yticklabel style={font=\scriptsize},
       axis x line*=bottom,
       axis y line*=left,
@@ -232,12 +270,12 @@
     \end{axis}
 
     \begin{axis}[
-      at={($(accplot.south east)+(13mm,0)$)},
+      at={($(accplot.south east)+(12mm,0)$)},
       anchor=south west,
       ybar,
-      bar width=13pt,
+      bar width=12pt,
       width=0.38\textwidth,
-      height=48mm,
+      height=50mm,
       ymin=0, ymax=6200,
       ylabel={Токенов на вопрос},
       ylabel style={font=\scriptsize},
@@ -260,32 +298,34 @@
       \addplot[fill=oiBlue!75, draw=none] table[x=mode, y=tokens, col sep=comma]{report/benchmark_tokens.csv};
     \end{axis}
   \end{tikzpicture}
-  \caption{Точность четырёх режимов по категориям вопросов (слева) и удельная стоимость в токенах на вопрос (справа).}\label{fig:bench}
+  \caption{Точность четырёх режимов по категориям вопросов и удельная стоимость в токенах на вопрос}\label{fig:bench}
 \end{figure}
 
-\textbf{Качество извлечения (\texttt{eval\_extraction.json}, \num{16} эталонных документов \texttt{gold\_dev.json}):} связи --- Precision~\num{1.000}, Recall~\num{1.000} (\num{161} из \num{161}); сущности --- Precision~\num{1.000}, Recall~\num{1.000} (\num{165} из \num{165}); отброшено проверками заземления (\texttt{dropped}): \num{0}.
+Звёздочкой в \cref{tab:bench} отмечено единственное ложное срабатывание метрики \texttt{fabricated} в режиме \texttt{local} на повторе <<\SI{2}{\text{шт.}}>> из формулировки вопроса \texttt{dev-21} (\cref{sec:errors}).
 
-\textbf{Стоимость индексации (\texttt{index\_stats.json}):} \num{80} документов (\num{92} чанка), \num{118} узлов, \num{279} рёбер, \num{8} сообществ, \num{0} отброшенных элементов, \num{0} конфликтов. Затраты LLM: \num{100} вызовов (\num{20} попаданий в кеш), \num{228614} prompt-токенов и \num{40812} completion-токенов. Повторный прогон всех \num{5} оценок по закоммиченному кешу полностью воспроизводит числа \cref{tab:bench}.
+Качество извлечения на \num{16} эталонных документах \path{gold_dev.json} (\path{eval_extraction.json}): связи --- Precision~\num{1.000}, Recall~\num{1.000} (\num{161} из \num{161}); сущности --- Precision~\num{1.000}, Recall~\num{1.000} (\num{165} из \num{165}); отброшено проверками заземления (\texttt{dropped}): \num{0}.
+
+Стоимость индексации (\path{index_stats.json}): \num{80} документов (\num{92} чанка), \num{118} узлов, \num{279} рёбер, \num{8} сообществ, \num{0} отброшенных элементов, \num{0} конфликтов. Затраты LLM: \num{100} вызовов (\num{20} попаданий в кеш), \num{228614} prompt-токенов и \num{40812} completion-токенов. Повторный прогон всех \num{5} оценок по закоммиченному кешу полностью воспроизводит числа \cref{tab:bench}.
 
 % ==================== 4. ГДЕ ГРАФ ПОМОГАЕТ И ГДЕ УСТУПАЕТ ====================
 \section{Где граф помогает и где уступает}\label{sec:compare}
 
-\textbf{Пример~1 (преимущество графа и агента --- \texttt{dev-06}, \texttt{dev-17}, \texttt{dev-22}--\texttt{dev-24}):} на вопросе <<Ошибка \texttt{E-17} на \texttt{AR-210}. Какую деталь заказать, есть ли она на складе в Казани и сколько она стоит?>> плоский RAG останавливается на устаревшей детали \texttt{P-1042} и не имеет доступа к ERP. В графе знаний (\cref{fig:subgraph}) \texttt{local\_search} проходит путь длиной \num{3} ребра \texttt{AR-210 -> P-1042 -> пусковое реле <- E-17}, автоматически разворачивает цепочку \texttt{P-1042 -> REPLACED\_BY -> P-1042B -> SUPPLIED\_BY -> ХолодКомплект}, после чего агент запрашивает ERP и возвращает точный ответ (\SI{3}{\text{шт.}}, \SI{2630}{\text{руб.}}). На вопросах отказа (\texttt{dev-22}--\texttt{dev-24}) граф мгновенно возвращает \texttt{refused=True} за \num{0} вызовов LLM против \num{1357} токенов у плоского RAG.
+\textbf{Пример~1 (преимущество графа и агента --- \texttt{dev-06}, \texttt{dev-17}, \texttt{dev-22}--\texttt{dev-24}).} На вопросе <<Ошибка \texttt{E-17} на \texttt{AR-210}. Какую деталь заказать, есть ли она на складе в Казани и сколько она стоит?>> плоский RAG останавливается на устаревшей детали \texttt{P-1042} и не имеет доступа к ERP. В графе знаний (\cref{fig:subgraph}) \texttt{local\_search} проходит путь длиной \num{3} ребра \texttt{AR-210 -> P-1042 -> пусковое реле <- E-17}, автоматически разворачивает цепочку \texttt{P-1042 -> REPLACED\_BY -> P-1042B -> SUPPLIED\_BY -> ХолодКомплект}, после чего агент запрашивает ERP и возвращает точный ответ (\SI{3}{\text{шт.}}, \SI{2630}{\text{руб.}}). На вопросах отказа (\texttt{dev-22}--\texttt{dev-24}) граф мгновенно возвращает \texttt{refused=True} за \num{0} вызовов LLM против \num{1357} токенов у плоского RAG.
 
-\textbf{Пример~2 (где граф уступает по стоимости или точности --- \texttt{dev-01}--\texttt{dev-05}, \texttt{dev-14}):} на простых однохоповых вопросах \texttt{local} (\texttt{dev-01}--\texttt{dev-05}) плоский RAG достигает тех же \num{100}\% (\num{5}/\num{5}) за \num{1} вызов модели без затрат на предварительную графовую индексацию (\num{269426} токенов), тогда как агент тратит в среднем \num{4.83} вызова (\num{5130.4} токена). На обзорном вопросе \texttt{dev-14} (<<Какой узел чаще всего отказывает в линейке <<Гольфстрим>>?>>) маршрутизация через \texttt{summarize\_topic} (Map-Reduce) привела к путанице модели-лидера (\texttt{GS-510}, \num{4} отказа) с узлом-лидером (<<циркуляционный насос>>, \num{8} отказов), тогда как прямой \texttt{local\_search} по подграфу линейки ответил верно.
+\textbf{Пример~2 (где граф уступает по стоимости или точности --- \texttt{dev-01}--\texttt{dev-05}, \texttt{dev-14}).} На простых однохоповых вопросах \texttt{local} (\texttt{dev-01}--\texttt{dev-05}) плоский RAG достигает тех же \num{100}\% (\num{5}/\num{5}) за \num{1} вызов модели без затрат на предварительную графовую индексацию (\num{269426} токенов), тогда как агент тратит в среднем \num{4.83} вызова (\num{5130.4} токена). На обзорном вопросе \texttt{dev-14} (<<Какой узел чаще всего отказывает в линейке <<Гольфстрим>>?>>) маршрутизация через \texttt{summarize\_topic} (Map-Reduce) привела к путанице модели-лидера (\texttt{GS-510}, \num{4} отказа) с узлом-лидером (<<циркуляционный насос>>, \num{8} отказов), тогда как прямой \texttt{local\_search} по подграфу линейки ответил верно.
 
-\begin{figure}[tbp]
+\begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[node distance=10mm and 16mm]
-    \node[agentbox, text width=24mm] (model) {\tiny Model:\\\textbf{\texttt{AR-210}}};
-    \node[neutralbox, dashed, right=of model, text width=26mm] (pold) {\tiny Part (снята):\\\textbf{\texttt{P-1042}}};
-    \node[tealbox, right=of pold, text width=26mm, line width=0.8pt] (pnew) {\tiny Part (замена):\\\textbf{\texttt{P-1042B}}};
+  \begin{tikzpicture}[node distance=9mm and 14mm]
+    \node[agentbox, text width=25mm] (model) {\scriptsize Model:\\\textbf{\texttt{AR-210}}};
+    \node[neutralbox, dashed, right=of model, text width=28mm] (pold) {\scriptsize Part (снята):\\\textbf{\texttt{P-1042}}};
+    \node[tealbox, right=of pold, text width=28mm, line width=0.8pt] (pnew) {\scriptsize Part (замена):\\\textbf{\texttt{P-1042B}}};
 
-    \node[gatebox, below=of model, text width=24mm] (err) {\tiny ErrorCode:\\\textbf{\texttt{E-17}}};
-    \node[sysbox, fill=orange!6, draw=oiOrange!70, below=of pold, text width=26mm] (comp) {\tiny Component:\\\textbf{пусковое реле}};
-    \node[sysbox, fill=purple!5, draw=oiPurple!80, below=of pnew, text width=26mm] (supp) {\tiny Supplier:\\\textbf{ХолодКомплект}};
+    \node[gatebox, below=of model, text width=25mm] (err) {\scriptsize ErrorCode:\\\textbf{\texttt{E-17}}};
+    \node[sysbox, fill=orange!6, draw=oiOrange!70, below=of pold, text width=28mm] (comp) {\scriptsize Component:\\\textbf{пусковое реле}};
+    \node[sysbox, fill=purple!5, draw=oiPurple!80, below=of pnew, text width=28mm] (supp) {\scriptsize Supplier:\\\textbf{ХолодКомплект}};
 
-    \node[sysbox, fill=cyan!5, draw=oiBlue!60, below=7mm of err, text width=24mm] (proc) {\tiny Procedure:\\\textbf{\texttt{SP-104}}};
+    \node[sysbox, fill=cyan!5, draw=oiBlue!60, below=7mm of err, text width=25mm] (proc) {\scriptsize Procedure:\\\textbf{\texttt{SP-104}}};
 
     \draw[flowarrow] (model) -- node[edgelabel]{HAS\_PART} (pold);
     \draw[alertarrow] (pold) -- node[edgelabel, text=oiOrange]{\textbf{REPLACED\_BY}} (pnew);
@@ -294,7 +334,7 @@
     \draw[flowarrow] (pnew) -- node[edgelabel]{SUPPLIED\_BY} (supp);
     \draw[flowarrow] (err) -- node[edgelabel]{FIXED\_BY} (proc);
   \end{tikzpicture}
-  \caption{Фрагмент графа знаний вокруг \texttt{AR-210}: \texttt{local\_search} проходит путь длиной \num{3} ребра между \texttt{AR-210} и \texttt{E-17}, затем разворачивает цепочку \texttt{REPLACED\_BY} и поставщика \texttt{SUPPLIED\_BY}.}\label{fig:subgraph}
+  \caption{Фрагмент графа знаний вокруг \texttt{AR-210}: путь длиной \num{3} ребра и разворачивание цепочки \texttt{REPLACED\_BY}}\label{fig:subgraph}
 \end{figure}
 
 % ==================== 5. АНАЛИЗ ОШИБОК ====================
@@ -307,10 +347,12 @@
   \item \textbf{Этап агента и инструментов (\texttt{agent.py}):} на \texttt{dev-21} агент верно определил \texttt{P-2054C}, проверил остаток (\SI{6}{\text{шт.}}) и цену (\SI{6750}{\text{руб.}}), но вместо вызова \texttt{create\_service\_order} сгенерировал текстовый ответ с расчётной суммой и <<\SI{2}{\text{шт.}}>> --- встроенный фильтр \texttt{\_find\_discrepancies} дважды перехватил неподтверждённые числа и безопасно перевёл ответ в отказ (\texttt{refused=True}). На \texttt{dev-12} при верном ответе (\texttt{P-1118B}, <<ТермоПрибор>>) модель исказила код регламента (\texttt{SP-205} вместо \texttt{SP-105}), что составило единственный реальный выдуманный факт агента (\num{1}/\num{24} = \num{0.042}).
 \end{enumerate}
 
-\begin{table}[tbp]
+\begin{table}[htbp]
   \centering
-  \caption{Эволюция качества извлечения на \num{16} эталонных документах \texttt{gold\_dev.json} и размере графа на полном корпусе.}\label{tab:extraction}
-  \footnotesize
+  \singlespacing
+  \caption{Эволюция качества извлечения на \num{16} эталонных документах \texttt{gold\_dev.json} и размере графа}\label{tab:extraction}
+  \scriptsize
+  \setlength{\tabcolsep}{4.5pt}
   \begin{tabular}{@{} l S[table-format=1.3] S[table-format=1.3] S[table-format=3.0] S[table-format=2.0] @{}}
     \toprule
     \textbf{Конфигурация \texttt{extraction.py}} & {\textbf{Precision}} & {\textbf{Recall}} & {\textbf{Рёбер в графе}} & {\textbf{Отброшено (\texttt{dropped})}} \\
@@ -331,17 +373,17 @@
   \item \textbf{Заземление аргументов (FR-7, FR-10):} номер детали \texttt{part\_id} должен присутствовать в вопросе пользователя или в результатах \texttt{search\_knowledge}; количество \texttt{qty} --- в вопросе; склад проверяется по закрытому списку из \num{4} городов (Москва, Санкт-Петербург, Казань, Новосибирск). При сбоях \texttt{ErpUnavailable} выполняются до \num{3} попыток; ответы чётко различают <<нет данных>> и <<остаток \num{0}>>.
 \end{itemize}
 
-\begin{figure}[tbp]
+\begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[node distance=6mm and 7mm]
-    \node[neutralbox, text width=22mm] (call) {\textbf{Вызов модели}\\(\texttt{ToolCall})};
+  \begin{tikzpicture}[node distance=6mm and 6mm, transform shape, scale=0.92]
+    \node[neutralbox, text width=23mm] (call) {\textbf{Вызов модели}\\(\texttt{ToolCall})};
     \node[neutralbox, right=of call, text width=28mm] (params) {\textbf{1.~Параметры}\\Склад (\num{4} города)\\Формат \texttt{Part~ID}};
     \node[neutralbox, right=of params, text width=29mm] (ground) {\textbf{2.~Заземление}\\\texttt{part\_id} в вопросе\\или в графе?};
     \node[agentbox, right=of ground, text width=28mm] (optype) {\textbf{3.~Тип операции}\\Чтение ERP или\\создание заказа?};
 
     \node[tealbox, above=7mm of optype, text width=28mm] (read) {\textbf{Чтение ERP~API}\\\texttt{/stock}, \texttt{/parts}};
-    \node[gatebox, below=9mm of optype, text width=30mm] (stop) {\textbf{\texttt{confirm=False}: STOP}\\\texttt{pending\_action} (FR-9)};
-    \node[gatebox, below=9mm of $(params)!0.5!(ground)$, text width=58mm] (rej) {\textbf{ОТКЛОНЕНИЕ:} возврат ошибки модели (FR-7)};
+    \node[gatebox, below=10mm of optype, text width=30mm] (stop) {\textbf{\texttt{confirm=False}: STOP}\\\texttt{pending\_action} (FR-9)};
+    \node[gatebox, below=10mm of $(params.south)!0.5!(ground.south)$, text width=58mm] (rej) {\textbf{ОТКЛОНЕНИЕ:} возврат ошибки модели (FR-7)};
 
     \draw[flowarrow] (call) -- (params);
     \draw[flowarrow] (params) -- (ground);
@@ -351,11 +393,12 @@
     \draw[alertarrow] (params.south) -- (params.south |- rej.north);
     \draw[alertarrow] (ground.south) -- (ground.south |- rej.north);
   \end{tikzpicture}
-  \caption{Блок-схема барьеров безопасности и шлюза Human-in-the-Loop при выполнении вызовов инструментов.}\label{fig:safety}
+  \caption{Блок-схема барьеров безопасности и шлюза Human-in-the-Loop}\label{fig:safety}
 \end{figure}
 
 Ниже приведена реальная трассировка агента из \path{artifacts/eval_agent.json} (\texttt{dev-17}) и схема срабатывания шлюза подтверждения:
-\begin{Verbatim}[fontsize=\scriptsize,frame=single,rulecolor=\color{black!30},framesep=4pt]
+\begin{singlespace}
+\begin{Verbatim}[fontsize=\scriptsize,frame=single,rulecolor=\color{black!30},framesep=4pt,samepage=true]
 Вопрос: «Ошибка E-17 на AR-210. Какую деталь заказать, есть ли она в Казани и сколько стоит?»
   1. search_knowledge({'question': 'Ошибка E-17 на AR-210'})
      -> пусковое реле; P-1042 заменена на P-1042B (ХолодКомплект), регламент SP-104
@@ -369,16 +412,17 @@
   [Safety Gate] create_service_order(part_id='P-2054C', warehouse='Москва', qty=2, model='BZ-120')
   -> needs_confirmation=True, pending_action={'tool': 'create_service_order', 'args': {...}}
 \end{Verbatim}
+\end{singlespace}
 
 % ==================== 7. СЛЕДУЮЩИЙ ШАГ ====================
 \section{Следующий шаг развития системы}\label{sec:next}
 
-\textbf{Проверяемая гипотеза:} структурированный маршрутизатор заказов в \texttt{agent.py} в сочетании с типизацией сущностей в \texttt{MAP\_SCHEMA} для \texttt{global\_search}. Если в запросе присутствует намерение оформления заказа и все \num{4} аргумента уже подтверждены, агент подсказывает модели прямой вызов \texttt{create\_service\_order} (\texttt{dev-21}); а добавление поля \texttt{entity\_type} (\texttt{component} / \texttt{model} / \texttt{part}) в \texttt{MAP\_SCHEMA} исключает смешение модели-лидера и узла-лидера на шаге \texttt{reduce} (\texttt{dev-14}). \emph{Критерий проверки:} рост точности агента с \num{0.917} (\num{22}/\num{24}) до \num{1.000} (\num{24}/\num{24}) и снижение \texttt{fabricated\_rate} агента до \num{0.000}.
+В качестве проверяемой гипотезы предлагается структурированный маршрутизатор заказов в \texttt{agent.py} в сочетании с типизацией сущностей в \texttt{MAP\_SCHEMA} для \texttt{global\_search}. Если в запросе присутствует намерение оформления заказа и все \num{4} аргумента уже подтверждены, агент подсказывает модели прямой вызов \texttt{create\_service\_order} (\texttt{dev-21}); а добавление поля \texttt{entity\_type} (\texttt{component} / \texttt{model} / \texttt{part}) в \texttt{MAP\_SCHEMA} исключает смешение модели-лидера и узла-лидера на шаге \texttt{reduce} (\texttt{dev-14}). Критерий проверки: рост точности агента с \num{0.917} (\num{22}/\num{24}) до \num{1.000} (\num{24}/\num{24}) и снижение \texttt{fabricated\_rate} агента до \num{0.000}.
 
 % ==================== 8. ВКЛАД УЧАСТНИКОВ ====================
 \section{Вклад участников}\label{sec:contrib}
 
-Проект выполнен индивидуально: проектирование промптов и заземления (\texttt{extraction.py}, \texttt{graph\_builder.py}); кластеризация Лувена, детерминированная статистика сообществ и оба режима поиска (\texttt{communities.py}, \texttt{search.py}); ReAct-агент, типизированные инструменты ERP и шлюз подтверждения (\texttt{tools.py}, \texttt{agent.py}); \num{41} модульный тест в \texttt{tests/unit/} (\num{183} теста всего с контрактными и инфраструктурными); развёртывание локального Ollama на GPU RTX~4070~SUPER, полный бенчмаркинг \num{4} режимов, анализ ошибок и вёрстка итогового отчёта.
+Проект выполнен индивидуально: проектирование промптов и заземления (\texttt{extraction.py}, \texttt{graph\_builder.py}); кластеризация Лувена, детерминированная статистика сообществ и оба режима поиска (\texttt{communities.py}, \texttt{search.py}); ReAct-агент, типизированные инструменты ERP и шлюз подтверждения (\texttt{tools.py}, \texttt{agent.py}); \num{41} модульный тест в \path{tests/unit/} (\num{183} теста всего с контрактными и инфраструктурными); развёртывание локального Ollama, полный бенчмаркинг \num{4} режимов, анализ ошибок и вёрстка итогового отчёта.
 
 % ==================== 9. ИСПОЛЬЗОВАНИЕ ИИ ====================
 \section{Использование ИИ-инструментов}\label{sec:ai}
