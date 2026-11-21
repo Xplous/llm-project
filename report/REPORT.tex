@@ -9,6 +9,7 @@
 \usepackage{booktabs}
 \usepackage{siunitx}
 \usepackage{xcolor}
+\usepackage{graphicx}
 \usepackage{tikz}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
@@ -16,6 +17,7 @@
 \usepackage{titlesec}
 \usepackage{titletoc}
 \usepackage{needspace}
+\usepackage{placeins}
 \usepackage{caption}
 \usepackage{enumitem}
 \usepackage{fancyvrb}
@@ -141,25 +143,32 @@
 \begin{document}
 
 % ==================== MODERN TITLE BLOCK ====================
-\noindent{\sffamily\footnotesize\bfseries\color{accentSlate}\MakeUppercase{Университет ИТМО \quad$\cdot$\quad Итоговый аналитический отчёт}}\par
-\vspace{4pt}
-\noindent{\sffamily\LARGE\bfseries\color{accentBlue} Ассистент сервисной службы <<ПолярТех>>}\par
-\vspace{2pt}
-\noindent{\sffamily\large\color{accentSlate} Graph~RAG и ReAct-агент с инструментами ERP}\par
-\vspace{6pt}
-\noindent{\sffamily\footnotesize\color{accentSlate}
-  \textbf{Модель LLM:} \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama) \qquad
-  \textbf{Эмбеддинги:} \texttt{bge-m3}\par
+\noindent\begin{minipage}[t]{0.74\linewidth}
+  \vspace{0pt}
+  {\sffamily\footnotesize\bfseries\color{accentSlate}\MakeUppercase{Университет ИТМО \quad$\cdot$\quad Итоговый аналитический отчёт}}\par
+  \vspace{4pt}
+  {\sffamily\LARGE\bfseries\color{accentBlue} Ассистент сервисной службы <<ПолярТех>>}\par
   \vspace{2pt}
-  \textbf{Репозиторий:} \url{https://github.com/Xplous/llm-project}
-}\par
+  {\sffamily\large\color{accentSlate} Graph~RAG и ReAct-агент с инструментами ERP}\par
+  \vspace{6pt}
+  {\sffamily\footnotesize\color{accentSlate}
+    \textbf{Модель LLM:} \texttt{qwen3:4b-instruct-2507-q4\_K\_M} (Ollama) \quad
+    \textbf{Эмбеддинги:} \texttt{bge-m3}\par
+    \vspace{2pt}
+    \textbf{Репозиторий:} \url{https://github.com/Xplous/llm-project}
+  }\par
+\end{minipage}\hfill
+\begin{minipage}[t]{0.23\linewidth}
+  \vspace{-2pt}
+  \raggedleft
+  \includegraphics[width=\linewidth]{figures/itmo_logo.png}
+\end{minipage}\par
 \vspace{4pt}
 \noindent{\color{accentBlue}\rule{\linewidth}{1.2pt}}
 
 % ==================== COMPACT TABLE OF CONTENTS ====================
-\vspace{2pt}
-{\tableofcontents}
-\vspace{2pt}
+{\linespread{1.02}\selectfont\setlength{\parskip}{0pt}\vspace{-12pt}\tableofcontents}
+\vspace{1pt}
 \noindent{\color{accentRule}\rule{\linewidth}{0.5pt}}
 
 % ==================== 1. ЗАДАЧА ====================
@@ -167,11 +176,17 @@
 
 Компания <<ПолярТех>> обслуживает коммерческое и промышленное холодильное оборудование (витрины, моноблоки, чиллеры). Диспетчер сервисной службы принимает заявки, содержащие модель оборудования и код ошибки панели управления (например, <<\texttt{AR-210}, код \texttt{E-17}>>). Задача ассистента --- оперативно определить отказавший узел, регламент ремонта и актуальную деталь с учётом снятия устаревших позиций с производства и цепочек замен (\texttt{REPLACED\_BY}), проверить остатки по \num{4} складам (Москва, Санкт-Петербург, Казань, Новосибирск) и цены в учётной системе (ERP), а затем подготовить сервисный заказ с обязательным подтверждением человеком.
 
+\noindent\begin{minipage}[c]{0.60\linewidth}
 Плоский векторный поиск (Flat~RAG) системно ошибается в двух классах сценариев:
-\begin{enumerate}
-  \item \textbf{Многошаговые замены (\texttt{dev-06}):} на вопросе <<Какую деталь заказать при ошибке \texttt{E-17} на \texttt{AR-210}?>> плоский RAG извлекает фрагмент руководства \texttt{manual\_AR-210.md} и отвечает снятой с производства деталью \texttt{P-1042}, не проходя по сервисному бюллетеню \texttt{bulletin\_SB-2025-03.md} к актуальной замене \texttt{P-1042B}.
+\begin{enumerate}[leftmargin=1.35em,itemsep=2pt,topsep=2pt]
+  \item \textbf{Многошаговые замены (\texttt{dev-06}):} на вопросе <<Какую деталь заказать при ошибке \texttt{E-17} на \texttt{AR-210}?>> плоский RAG извлекает фрагмент \texttt{manual\_AR-210.md} и отвечает снятой деталью \texttt{P-1042}, не проходя по бюллетеню \texttt{bulletin\_SB-2025-03.md} к актуальной замене \texttt{P-1042B}.
   \item \textbf{Оперативные данные ERP (\texttt{dev-17}, \texttt{dev-20}):} на вопросе <<Сколько штук детали \texttt{P-1118B} есть на складе в Казани?>> плоский RAG получает точность \num{0.000}, так как динамические остатки и цены отсутствуют в статических документах и доступны только через API учётной системы.
 \end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/machine_learning.png}
+\end{minipage}
 
 % ==================== 2. РЕШЕНИЕ ====================
 \section{Архитектура решения и ReAct-конвейер}\label{sec:arch}
@@ -317,6 +332,7 @@
   \caption{Точность четырёх режимов по категориям вопросов (слева) и удельная стоимость в токенах на вопрос (справа).}\label{fig:bench}
 \end{figure}
 
+\needspace{3\baselineskip}
 \textbf{Качество извлечения (\path{eval_extraction.json}, \num{16} эталонных документов \path{gold_dev.json}):} связи --- Precision~\num{1.000}, Recall~\num{1.000} (\num{168} найдено при \num{161} эталонных с учётом \num{7} восстановленных связей \texttt{IS\_A} у деталей-замен); сущности --- Precision~\num{1.000}, Recall~\num{1.000} (\num{169} найдено при \num{165} эталонных); отброшено проверками заземления (\texttt{dropped}): \num{0}.
 
 \textbf{Стоимость индексации (\path{index_stats.json}):} \num{80} документов (\num{92} чанка), \num{118} узлов, \num{286} рёбер, \num{8} сообществ, \num{0} отброшенных элементов, \num{0} конфликтов. Затраты LLM: \num{100} вызовов (\num{20} попаданий в кеш при первом прогоне, \num{100}/\num{100} при офлайн-проверке), \num{233753} prompt-токенов и \num{41192} completion-токенов. Повторный прогон всех \num{6} команд по закоммиченному кешу в офлайн-режиме полностью воспроизводит числа \cref{tab:bench}.
@@ -382,6 +398,11 @@
 % ==================== 6. ГРАНИЦЫ СИСТЕМЫ ====================
 \section{Границы системы и безопасность (FR-9, FR-10)}\label{sec:safety}
 
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figures/exploits_of_a_mom.png}
+\end{figure}
+
 Контур безопасности (\cref{fig:safety}) исключает несанкционированные изменения в ERP и галлюцинации в аргументах:
 \begin{itemize}
   \item \textbf{Подтверждение человеком (FR-9):} при \texttt{confirm=False} (по умолчанию) вызов \texttt{create\_service\_order} сначала проходит полную валидацию склада и количества, а затем перехватывается до обращения к ERP и не добавляется в список выполненных шагов; агент возвращает \texttt{needs\_confirmation=True} и структуру \texttt{pending\_action} с параметрами заказа. Реальное создание заказа выполняется только при явном запуске с флагом \texttt{--confirm} и без автоматических повторов (защита от дублирования неидемпотентной операции).
@@ -411,7 +432,9 @@
   \caption{Блок-схема барьеров безопасности и шлюза Human-in-the-Loop при выполнении вызовов инструментов.}\label{fig:safety}
 \end{figure}
 
-Ниже приведены две реальные трассировки агента из \path{artifacts/eval_agent.json} (\texttt{dev-17} и шлюз подтверждения на \texttt{dev-21}):
+\FloatBarrier
+\needspace{12\baselineskip}
+\noindent Ниже приведены две реальные трассировки агента из \path{artifacts/eval_agent.json} (\texttt{dev-17} и шлюз подтверждения на \texttt{dev-21}):
 \begin{Verbatim}[fontsize=\scriptsize,frame=single,rulecolor=\color{accentRule},framesep=5pt,samepage=true]
 [dev-17] «Ошибка E-17 на AR-210. Какую деталь заказать, есть ли она в Казани и сколько стоит?»
   1. search_knowledge({'question': 'Ошибка E-17 на AR-210...'})
@@ -433,7 +456,13 @@
 % ==================== 7. СЛЕДУЮЩИЙ ШАГ ====================
 \section{Следующий шаг развития системы}\label{sec:next}
 
-В качестве проверяемой гипотезы предлагается оптимизация стоимости инференса агента на простых запросах в сочетании со слепой проверкой на расширенном наборе тестов. Сейчас агент достигает точности \num{1.000} (\num{24}/\num{24}) при нулевой доле галлюцинаций, но тратит в среднем \num{5498.1} токена на вопрос (в \num{4.8} раза дороже \texttt{local\_search}) из-за многошаговой передачи истории ReAct и вызова \texttt{summarize\_topic} (Map-Reduce по всем \num{8} сообществам). Гипотеза: добавление детерминированного предфильтра сообществ по линейке до шага \texttt{map} (вместо фильтрации после \texttt{map}) и сжатие возвращаемых \texttt{facts} в \texttt{search\_knowledge} позволит сократить расход токенов агента на \num{35}--\num{45}\% (до $< 3200$ токенов/вопрос) при сохранении \num{1.000} точности и \num{0.000} галлюцинаций как на \path{questions_dev.jsonl}, так и на новом наборе вопросов с косвенными падежами и инъекциями.
+\noindent\begin{minipage}[c]{0.55\linewidth}
+В качестве проверяемой гипотезы предлагается оптимизация стоимости инференса агента на простых запросах в сочетании со слепой проверкой на расширенном наборе тестов. Сейчас агент достигает точности \num{1.000} (\num{24}/\num{24}) при нулевой доле галлюцинаций, но тратит в среднем \num{5498.1} токена на вопрос (в \num{4.8} раза дороже \texttt{local\_search}) из-за истории ReAct и вызова \texttt{summarize\_topic} по всем \num{8} сообществам. Гипотеза: предфильтр сообществ по линейке до шага \texttt{map} и сжатие \texttt{facts} в \texttt{search\_knowledge} сократят расход токенов агента на \num{35}--\num{45}\% (до $< 3200$ токенов/вопрос) при сохранении \num{1.000} точности и \num{0.000} галлюцинаций как на \path{questions_dev.jsonl}, так и на новом наборе вопросов с косвенными падежами и инъекциями.
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/automation.png}
+\end{minipage}
 
 % ==================== 8. ВКЛАД УЧАСТНИКОВ ====================
 \section{Вклад участников}\label{sec:contrib}
@@ -441,6 +470,7 @@
 Проект выполнен индивидуально: проектирование промптов и заземления (\texttt{extraction.py}, \texttt{graph\_builder.py}); кластеризация Лувена, детерминированная статистика сообществ и оба режима поиска (\texttt{communities.py}, \texttt{search.py}); ReAct-агент, типизированные инструменты ERP и шлюз подтверждения (\texttt{tools.py}, \texttt{agent.py}); \num{51} модульный тест в \path{tests/unit/} (\num{193} теста всего с контрактными и инфраструктурными); red-team аудит уязвимостей RAG и агента; развёртывание локального Ollama, полный бенчмаркинг \num{4} режимов, проверка офлайн-воспроизводимости и вёрстка итогового отчёта.
 
 % ==================== 9. ИСПОЛЬЗОВАНИЕ ИИ ====================
+\needspace{10\baselineskip}
 \section{Использование ИИ-инструментов}\label{sec:ai}
 
 В процессе разработки использовались ИИ-ассистенты кодирования (Antigravity / Gemini) как вспомогательный инженерный инструмент на следующих этапах:
@@ -449,22 +479,5 @@
   \item \textbf{Диагностика сбоев и рефакторинг промптов:} анализ усечения JSON при лимите \texttt{max\_tokens=1024}, восстановление \num{7} связей \texttt{IS\_A} у деталей-замен и перевод few-shot примеров на полностью синтетические данные без утечки эталона \path{gold_dev.json}.
   \item \textbf{Вёрстка и визуализация результатов:} подготовка исходного кода отчёта в LaTeX с векторными схемами на TikZ и графиками бенчмарка на PGFPlots.
 \end{itemize}
-
-\begin{center}
-\begin{tikzpicture}
-  \node[
-    rectangle,
-    fill=gray!6,
-    inner sep=9pt,
-    text width=\dimexpr\linewidth-20pt\relax,
-    align=left,
-    font=\small
-  ] (box) {%
-    {\sffamily\bfseries\color{accentBlue} Верификация и авторский контроль.}
-    Все архитектурные решения, реализация \num{6} студенческих модулей, результаты прогонов на всех \num{4} режимах, расчётные метрики, трассы агента и байт-в-байт целостность защищённой инфраструктуры проверены автором лично.
-  };
-  \draw[accentBlue, line width=2pt] (box.north west) -- (box.south west);
-\end{tikzpicture}
-\end{center}
 
 \end{document}
